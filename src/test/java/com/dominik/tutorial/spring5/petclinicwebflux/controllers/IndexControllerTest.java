@@ -13,29 +13,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @WebFluxTest(controllers = IndexController.class)
 class IndexControllerTest {
 
+    private static final String EXPECTED_TEXT = "Welcome to Petclinic - Webflux version!";
+
     @Autowired
     private WebTestClient webTestClient;
 
     @Test
-    void startPage() throws Exception {
-        // Testing endpoint: ""
+    void startPageWithoutSlash() throws Exception {
+        String endpoint = "";
         FluxExchangeResult result = this.webTestClient.get()
-                .uri("")
+                .uri(endpoint)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
-        assertEquals("", result.getUriTemplate());
-        assertTrue(new String(result.getResponseBodyContent()).contains("Welcome to Petclinic - Webflux version!"));
+        assertEquals(endpoint, result.getUriTemplate());
+        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_TEXT));
+    }
 
+    @Test
+    void startPageWitSlash() throws Exception {
         // Testing endpoint "/"
-        result = this.webTestClient.get()
-                .uri("/")
+        String endpoint = "/";
+        FluxExchangeResult result = this.webTestClient.get()
+                .uri(endpoint)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
-        assertEquals("/", result.getUriTemplate());
-        assertTrue(new String(result.getResponseBodyContent()).contains("Welcome to Petclinic - Webflux version!"));
+        assertEquals(endpoint, result.getUriTemplate());
+        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_TEXT));
     }
 }
