@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ public class Pet extends BaseEntity {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
     private PetType petType;
-    private List<Visit> visits;
+    private List<Visit> visits = new ArrayList<>();
 
     @Builder
     public Pet(UUID id, String name, LocalDate birthDate, PetType petType, List<Visit> visits) {
@@ -24,7 +25,9 @@ public class Pet extends BaseEntity {
         this.name = name;
         this.birthDate = birthDate;
         this.petType = petType;
-        this.visits = visits;
+        if (visits != null) {
+            this.visits = visits;
+        }
     }
 
     public Pet() {

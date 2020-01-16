@@ -10,4 +10,5 @@ public interface OwnerService {
 
     public Flux<Owner> findAll();
     public Mono<Owner> getById(UUID id);
+    public Mono<Owner> save(Owner owner);
 }

@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -96,5 +97,28 @@ class OwnerServiceMongoTest {
         assertEquals("Picker", resultMonoExists.block().getLastName());
         verify(this.ownerRepository, times(1)).findById(id1);
         verify(this.ownerRepository, times(1)).findById(id2);
+    }
+
+    @Test
+    void testSave() {
+        // given
+        Owner owner = Owner.builder()
+                .id(null)
+                .firstName("Dominik")
+                .lastName("Picker")
+                .address("Address")
+                .city("City")
+                .telephone("123123")
+                .pets(new ArrayList<>())
+                .build();
+        when(this.ownerRepository.save(any())).thenReturn(Mono.just(owner));
+
+        // when
+        Mono<Owner> result = this.ownerServiceMongo.save(owner);
+
+        // then
+        assertTrue(result.hasElement().block());
+        assertEquals(owner, result.block());
+        verify(this.ownerRepository, times(1)).save(owner);
     }
 }

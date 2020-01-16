@@ -27,4 +27,10 @@ public class OwnerServiceMongo implements OwnerService {
     public Mono<Owner> getById(UUID id) {
         return this.ownerRepository.findById(id);
     }
+
+    @Override
+    public Mono<Owner> save(Owner owner) {
+        return this.ownerRepository.save(owner);
+    }
+
 }
