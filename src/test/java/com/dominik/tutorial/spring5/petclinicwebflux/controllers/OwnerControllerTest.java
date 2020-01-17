@@ -30,7 +30,8 @@ class OwnerControllerTest {
 
     private static final String ENDPOINT_FIND_OWNER_FORM = "/owners/find";
     private static final String ENDPOINT_ADD_OWNER_FORM = "/owners/new";
-    private static final String ENDPOINT_OWNER_DETAILS = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e";
+    private static final String ENDPOINT_OWNER_DETAILS_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e";
+    private static final String ENDPOINT_OWNER_DETAILS_INVALID = "/owners/123";
 
     private static final String EXPECTED_HTML_FIND_OWNER = "<h2>Find Owners</h2>";
     private static final String EXPECTED_HMTL_ADD_OWNER = "<h2>Owner</h2>";
@@ -137,7 +138,7 @@ class OwnerControllerTest {
 
         // when / then
         FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_OWNER_DETAILS)
+                .uri(ENDPOINT_OWNER_DETAILS_VALID)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
@@ -153,10 +154,20 @@ class OwnerControllerTest {
 
         // when / then
         this.webTestClient.get()
-                .uri(ENDPOINT_OWNER_DETAILS)
+                .uri(ENDPOINT_OWNER_DETAILS_VALID)
                 .exchange()
                 .expectStatus().isNotFound();
         verify(this.ownerService, times(1)).getById(any());
+    }
+
+    @Test
+    void testOwnerDetailsInvalidUUID() {
+        // when / then
+        this.webTestClient.get()
+                .uri(ENDPOINT_OWNER_DETAILS_INVALID)
+                .exchange()
+                .expectStatus().isBadRequest();
+        verifyNoInteractions(this.ownerService);
     }
 
     private MultiValueMap<String, String> ownerToFormDataMap(Owner owner) {

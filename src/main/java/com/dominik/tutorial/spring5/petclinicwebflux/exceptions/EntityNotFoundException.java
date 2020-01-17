@@ -7,6 +7,6 @@ public class EntityNotFoundException extends RuntimeException {
     }
 
     public static EntityNotFoundException failedIdLookup(Class type, String id) {
-        return new EntityNotFoundException(type.getName().toString() + " with ID " + id + " not found");
+        return new EntityNotFoundException(type.getSimpleName() + " with ID " + id + " not found");
     }
 }
