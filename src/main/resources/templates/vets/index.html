@@ -11,6 +11,10 @@
     @thymesVar id="vet" type="com.dominik.tutorial.spring5.petclinic.model.Vet
     */
 -->
+
+<!-- Used for tests, do not remove -->
+<!-- VIEW:vets/index -->
+
 <table class="table table-striped">
     <thead>
     <tr>
@@ -23,8 +27,8 @@
         <td th:text="${vet?.firstName} + ' ' + ${vet?.lastName}"></td>
         <td>
             <ul>
-                <li th:each="speciality : ${vet.specialities}">
-                    <span th:text="${speciality.description} + ' (' + ${speciality.id} + ')'">Speciality</span>
+                <li th:each="specialty : ${vet.specialties}">
+                    <span th:text="${specialty}">Speciality</span>
                 </li>
             </ul>
         </td>

@@ -8,8 +8,8 @@ import java.util.UUID;
 
 public interface OwnerService {
 
-    public Flux<Owner> findAll();
-    public Mono<Owner> getById(UUID id);
-    public Mono<Owner> save(Owner owner);
-    public Flux<Owner> findByLastNameFragment(String lastNameFragment);
+    Flux<Owner> findAll();
+    Mono<Owner> getById(UUID id);
+    Mono<Owner> save(Owner owner);
+    Flux<Owner> findByLastNameFragment(String lastNameFragment);
 }
