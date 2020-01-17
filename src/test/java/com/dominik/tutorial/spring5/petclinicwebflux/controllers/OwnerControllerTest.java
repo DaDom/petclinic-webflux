@@ -34,11 +34,15 @@ class OwnerControllerTest extends ControllerTestParent {
     private static final String ENDPOINT_FIND_OWNERS = "/owners";
     private static final String ENDPOINT_OWNER_DETAILS_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e";
     private static final String ENDPOINT_OWNER_DETAILS_INVALID = "/owners/123";
+    private static final String ENDPOINT_UPDATE_OWNER_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e/edit";
+    private static final String ENDPOINT_UPDATE_OWNER_INVALID = "/owners/123/edit";
 
     private static final String EXPECTED_VIEW_FIND_OWNER = "owners/findOwners";
     private static final String EXPECTED_VIEW_ADD_OWNER = "owners/createOrUpdateOwnerForm";
+    private static final String EXPECTED_VIEW_UPDATE_OWNER = "owners/createOrUpdateOwnerForm";
     private static final String EXPECTED_VIEW_OWNER_DETAILS = "owners/ownerDetails";
     private static final String EXPECTED_VIEW_OWNER_LIST = "owners/ownersList";
+    private static final String EXPECTED_VIEW_400_ERROR = "400error";
 
     private static final String QUERY_PARAM_FIND_OWNERS = "lastName";
 
@@ -160,21 +164,25 @@ class OwnerControllerTest extends ControllerTestParent {
         when(this.ownerService.getById(any())).thenReturn(Mono.empty());
 
         // when / then
-        this.webTestClient.get()
+        FluxExchangeResult result = this.webTestClient.get()
                 .uri(ENDPOINT_OWNER_DETAILS_VALID)
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isNotFound()
+                .returnResult(FluxExchangeResult.class);
         verify(this.ownerService, times(1)).getById(any());
+        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
     @Test
     void testOwnerDetailsInvalidUUID() {
         // when / then
-        this.webTestClient.get()
+        FluxExchangeResult result = this.webTestClient.get()
                 .uri(ENDPOINT_OWNER_DETAILS_INVALID)
                 .exchange()
-                .expectStatus().isBadRequest();
+                .expectStatus().isBadRequest()
+                .returnResult(FluxExchangeResult.class);
         verifyNoInteractions(this.ownerService);
+        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
     @Test
@@ -231,6 +239,60 @@ class OwnerControllerTest extends ControllerTestParent {
         // then
         verify(this.ownerService, times(1)).findByLastNameFragment(anyString());
         this.verifyView(EXPECTED_VIEW_OWNER_LIST, result);
+    }
+
+    @Test
+    void testShowUpdateOwnerFormValid() {
+        // given
+        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
+
+        // when
+        FluxExchangeResult result = this.webTestClient.get()
+                .uri(ENDPOINT_UPDATE_OWNER_VALID)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verify(this.ownerService, times(1)).getById(any());
+        this.verifyView(EXPECTED_VIEW_UPDATE_OWNER, result);
+    }
+
+    @Test
+    void testShowUpdateOwnerFormInvalid() {
+        // given
+        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
+
+        // when
+        FluxExchangeResult result = this.webTestClient.get()
+                .uri(ENDPOINT_UPDATE_OWNER_INVALID)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verifyNoInteractions(this.ownerService);
+        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
+    }
+
+    @Test
+    void testShowUpdateOwnerFormNotFound() {
+        // given
+        when(this.ownerService.getById(any())).thenReturn(Mono.empty());
+
+        // when
+        FluxExchangeResult result = this.webTestClient.get()
+                .uri(ENDPOINT_UPDATE_OWNER_VALID)
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verify(this.ownerService, times(1)).getById(any());
+        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
     private MultiValueMap<String, String> ownerToFormDataMap(Owner owner) {

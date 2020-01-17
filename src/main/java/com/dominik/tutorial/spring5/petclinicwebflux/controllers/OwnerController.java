@@ -84,10 +84,20 @@ public class OwnerController extends BaseController {
     @GetMapping("/{ownerId}")
     public Mono<String> showOwnerDetails(@PathVariable String ownerId, Model model) {
         UUID ownerUUID = this.fromStringOrThrow(ownerId, Owner.class);
-        Mono<Owner> owner = this.ownerService.getById(UUID.fromString(ownerId));
+        Mono<Owner> owner = this.ownerService.getById(ownerUUID);
         model.addAttribute(MODEL_ATTRIBUTE_OWNER, owner);
         return owner
                 .flatMap(o -> Mono.just(VIEW_OWNER_DETAILS))
+                .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)));
+    }
+
+    @GetMapping("/{ownerId}/edit")
+    public Mono<String> showUpdateOwnerForm(@PathVariable String ownerId, Model model) {
+        UUID ownerUUID = this.fromStringOrThrow(ownerId, Owner.class);
+        Mono<Owner> owner = this.ownerService.getById(ownerUUID);
+        model.addAttribute(MODEL_ATTRIBUTE_OWNER, owner);
+        return owner
+                .flatMap(o -> Mono.just(VIEW_CREATE_OR_UPDATE_OWNER_FORM))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)));
     }
 }
