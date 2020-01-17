@@ -10,7 +10,6 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
-import javax.validation.Validator;
 import java.util.UUID;
 
 @Controller
@@ -27,12 +26,10 @@ public class OwnerController extends BaseController {
 
 
     private final OwnerService ownerService;
-    private final Validator validator;
     private DataBinder dataBinder;
 
-    public OwnerController(OwnerService ownerService, Validator validator) {
+    public OwnerController(OwnerService ownerService) {
         this.ownerService = ownerService;
-        this.validator = validator;
     }
 
     @InitBinder
@@ -86,6 +83,7 @@ public class OwnerController extends BaseController {
         UUID ownerUUID = this.fromStringOrThrow(ownerId, Owner.class);
         Mono<Owner> owner = this.ownerService.getById(ownerUUID);
         model.addAttribute(MODEL_ATTRIBUTE_OWNER, owner);
+        model.addAttribute(MODEL_ATTRIBUTE_IS_NEW, false);
         return owner
                 .flatMap(o -> Mono.just(VIEW_OWNER_DETAILS))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)));
@@ -99,5 +97,22 @@ public class OwnerController extends BaseController {
         return owner
                 .flatMap(o -> Mono.just(VIEW_CREATE_OR_UPDATE_OWNER_FORM))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)));
+    }
+
+    @PostMapping("/{ownerId}/edit")
+    public Mono<String> updateOwner(@PathVariable String ownerId, @ModelAttribute("owner") Mono<Owner> owner, Model model) {
+        UUID ownerUUID = this.fromStringOrThrow(ownerId, Owner.class);
+        this.dataBinder.validate();
+        if (this.dataBinder.getBindingResult().hasErrors()) {
+            model.addAttribute(MODEL_ATTRIBUTE_IS_NEW, false);
+            return Mono.just(VIEW_CREATE_OR_UPDATE_OWNER_FORM);
+        }
+        return owner
+                .flatMap(o -> {
+                    o.setId(ownerUUID);
+                    return Mono.just(o);
+                })
+                .flatMap(this.ownerService::save)
+                .flatMap(o -> Mono.just("redirect:/owners/" + ownerId));
     }
 }

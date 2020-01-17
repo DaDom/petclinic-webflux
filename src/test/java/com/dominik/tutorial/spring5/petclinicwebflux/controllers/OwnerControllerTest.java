@@ -4,6 +4,7 @@ import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -292,6 +293,89 @@ class OwnerControllerTest extends ControllerTestParent {
 
         // then
         verify(this.ownerService, times(1)).getById(any());
+        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
+    }
+
+    @Test
+    void testUpdateOwnerValid() {
+        // given
+        String id = UUID.randomUUID().toString();
+        Owner owner = Owner.builder()
+                .id(UUID.fromString(id))
+                .firstName("Michael")
+                .lastName("Jackson")
+                .address("Neverland Ranch")
+                .city("Las Vegas")
+                .telephone("123123123")
+                .build();
+        when(this.ownerService.save(any())).thenReturn(Mono.just(owner));
+        ArgumentCaptor captor = ArgumentCaptor.forClass(Owner.class);
+
+        // when
+        FluxExchangeResult result = this.webTestClient.post()
+                .uri("/owners/" + id + "/edit")
+                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().value("Location", endsWith("/owners/" + id))
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verify(this.ownerService, times(1)).save((Owner) captor.capture());
+        Owner capturedOwner = (Owner)captor.getValue();
+        assertEquals(id, capturedOwner.getId().toString());
+    }
+
+    @Test
+    void testUpdateOwnerIncomplete() {
+        // given
+        String id = UUID.randomUUID().toString();
+        String url = "/owners/" + id + "/edit";
+        Owner owner = Owner.builder()
+                .firstName("Michael")
+                .address("Neverland Ranch")
+                .city("Las Vegas")
+                .telephone("123123123")
+                .build();
+
+        // when
+        FluxExchangeResult result = this.webTestClient.post()
+                .uri(url)
+                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verifyNoInteractions(this.ownerService);
+        assertEquals(url, result.getUriTemplate());
+        this.verifyView(EXPECTED_VIEW_UPDATE_OWNER, result);
+    }
+
+    @Test
+    void testUpdateOwnerInvalidUUID() {
+        // given
+        String id = "123";
+        Owner owner = Owner.builder()
+                .firstName("Michael")
+                .lastName("Jackson")
+                .address("Neverland Ranch")
+                .city("Las Vegas")
+                .telephone("123123123")
+                .build();
+
+        // when
+        FluxExchangeResult result = this.webTestClient.post()
+                .uri("/owners/" + id + "/edit")
+                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verifyNoInteractions(this.ownerService);
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
