@@ -33,4 +33,9 @@ public class OwnerServiceMongo implements OwnerService {
         return this.ownerRepository.save(owner);
     }
 
+    @Override
+    public Flux<Owner> findByLastNameFragment(String lastNameFragment) {
+        return this.ownerRepository.findByLastNameContainingIgnoreCase(lastNameFragment);
+    }
+
 }

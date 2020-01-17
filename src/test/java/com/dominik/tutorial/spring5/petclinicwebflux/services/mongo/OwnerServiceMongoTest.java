@@ -121,4 +121,27 @@ class OwnerServiceMongoTest {
         assertEquals(owner, result.block());
         verify(this.ownerRepository, times(1)).save(owner);
     }
+
+    @Test
+    void testFindByLastNameFragment() {
+        // given
+        Owner owner = Owner.builder()
+                .id(null)
+                .firstName("Dominik")
+                .lastName("Picker")
+                .address("Address")
+                .city("City")
+                .telephone("123123")
+                .pets(new ArrayList<>())
+                .build();
+        when(this.ownerRepository.findByLastNameContainingIgnoreCase(anyString())).thenReturn(Flux.just(owner));
+
+        // when
+        Flux<Owner> result = this.ownerServiceMongo.findByLastNameFragment("anything");
+
+        // then
+        assertTrue(result.hasElements().block());
+        assertEquals(owner, result.blockFirst());
+        verify(this.ownerRepository, times(1)).findByLastNameContainingIgnoreCase(anyString());
+    }
 }

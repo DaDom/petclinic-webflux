@@ -41,16 +41,19 @@ public class OwnerController extends BaseController {
         this.dataBinder = webDataBinder;
     }
 
-    @GetMapping({"", "/"})
-    public String findOwners(@RequestParam String lastName, Model model) {
+    @PostMapping({"", "/"})
+    public String findOwners(@RequestParam(required = false) String lastName, Model model) {
         if (lastName == null) {
-            return VIEW_FIND_OWNERS_FORM;
+            return "redirect:/owners/find";
         }
         if (lastName.trim().equals("")) {
             model.addAttribute("selections", this.ownerService.findAll());
-            return VIEW_OWNERS_LIST;
         }
-        return null;
+        else {
+            model.addAttribute("selections", this.ownerService.findByLastNameFragment(lastName));
+        }
+
+        return VIEW_OWNERS_LIST;
     }
 
     @GetMapping("/find")

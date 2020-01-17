@@ -14,6 +14,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -30,12 +32,16 @@ class OwnerControllerTest {
 
     private static final String ENDPOINT_FIND_OWNER_FORM = "/owners/find";
     private static final String ENDPOINT_ADD_OWNER_FORM = "/owners/new";
+    private static final String ENDPOINT_FIND_OWNERS = "/owners";
     private static final String ENDPOINT_OWNER_DETAILS_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e";
     private static final String ENDPOINT_OWNER_DETAILS_INVALID = "/owners/123";
 
     private static final String EXPECTED_HTML_FIND_OWNER = "<h2>Find Owners</h2>";
     private static final String EXPECTED_HMTL_ADD_OWNER = "<h2>Owner</h2>";
     private static final String EXPECTED_HTML_OWNER_DETAILS = "<h2>Owner Information</h2>";
+    private static final String EXPECTED_HTML_OWNER_LIST = "<h2>Owners</h2>";
+
+    private static final String QUERY_PARAM_FIND_OWNERS = "lastName";
 
     @MockBean
     private OwnerService ownerService;
@@ -168,6 +174,62 @@ class OwnerControllerTest {
                 .exchange()
                 .expectStatus().isBadRequest();
         verifyNoInteractions(this.ownerService);
+    }
+
+    @Test
+    void testFindOwnersWithoutQuery() {
+        // when
+        FluxExchangeResult result = this.webTestClient.post()
+                .uri(ENDPOINT_FIND_OWNERS)
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().value("Location", endsWith("/owners/find"))
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verifyNoInteractions(this.ownerService);
+    }
+
+    @Test
+    void testFindOwnersWithBlankQuery() {
+        // given
+        when(this.ownerService.findAll()).thenReturn(Flux.empty());
+
+        // when
+        String url = UriComponentsBuilder.fromUriString(ENDPOINT_FIND_OWNERS)
+                .queryParam(QUERY_PARAM_FIND_OWNERS, "")
+                .toUriString();
+        FluxExchangeResult result = this.webTestClient.post()
+                .uri(url)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verify(this.ownerService, times(1)).findAll();
+        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_HTML_OWNER_LIST));
+    }
+
+    @Test
+    void testFindOwnersWithQuery() {
+        // given
+        when(this.ownerService.findByLastNameFragment(anyString())).thenReturn(Flux.empty());
+
+        // when
+        String url = UriComponentsBuilder.fromUriString(ENDPOINT_FIND_OWNERS)
+                .queryParam(QUERY_PARAM_FIND_OWNERS, "anything")
+                .toUriString();
+        FluxExchangeResult result = this.webTestClient.post()
+                .uri(url)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .returnResult(FluxExchangeResult.class);
+
+        // then
+        verify(this.ownerService, times(1)).findByLastNameFragment(anyString());
+        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_HTML_OWNER_LIST));
     }
 
     private MultiValueMap<String, String> ownerToFormDataMap(Owner owner) {
