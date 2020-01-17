@@ -41,7 +41,7 @@ public class OwnerController extends BaseController {
         this.dataBinder = webDataBinder;
     }
 
-    @PostMapping({"", "/"})
+    @GetMapping({"", "/"})
     public String findOwners(@RequestParam(required = false) String lastName, Model model) {
         if (lastName == null) {
             return "redirect:/owners/find";

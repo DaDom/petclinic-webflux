@@ -179,7 +179,7 @@ class OwnerControllerTest {
     @Test
     void testFindOwnersWithoutQuery() {
         // when
-        FluxExchangeResult result = this.webTestClient.post()
+        FluxExchangeResult result = this.webTestClient.get()
                 .uri(ENDPOINT_FIND_OWNERS)
                 .exchange()
                 .expectStatus().is3xxRedirection()
@@ -199,7 +199,7 @@ class OwnerControllerTest {
         String url = UriComponentsBuilder.fromUriString(ENDPOINT_FIND_OWNERS)
                 .queryParam(QUERY_PARAM_FIND_OWNERS, "")
                 .toUriString();
-        FluxExchangeResult result = this.webTestClient.post()
+        FluxExchangeResult result = this.webTestClient.get()
                 .uri(url)
                 .exchange()
                 .expectStatus().isOk()
@@ -220,7 +220,7 @@ class OwnerControllerTest {
         String url = UriComponentsBuilder.fromUriString(ENDPOINT_FIND_OWNERS)
                 .queryParam(QUERY_PARAM_FIND_OWNERS, "anything")
                 .toUriString();
-        FluxExchangeResult result = this.webTestClient.post()
+        FluxExchangeResult result = this.webTestClient.get()
                 .uri(url)
                 .exchange()
                 .expectStatus().isOk()
