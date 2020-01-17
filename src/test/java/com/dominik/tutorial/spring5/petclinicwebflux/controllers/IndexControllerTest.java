@@ -8,12 +8,11 @@ import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @WebFluxTest(controllers = IndexController.class)
-class IndexControllerTest {
+class IndexControllerTest extends ControllerTestParent {
 
-    private static final String EXPECTED_TEXT = "Welcome to Petclinic - Webflux version!";
+    private static final String EXPECTED_VIEW = "index";
 
     @Autowired
     private WebTestClient webTestClient;
@@ -28,7 +27,7 @@ class IndexControllerTest {
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
         assertEquals(endpoint, result.getUriTemplate());
-        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_TEXT));
+        this.verifyView(EXPECTED_VIEW, result);
     }
 
     @Test
@@ -42,6 +41,6 @@ class IndexControllerTest {
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
         assertEquals(endpoint, result.getUriTemplate());
-        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_TEXT));
+        this.verifyView(EXPECTED_VIEW, result);
     }
 }

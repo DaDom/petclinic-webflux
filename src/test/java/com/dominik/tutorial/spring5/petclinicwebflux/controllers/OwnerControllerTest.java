@@ -22,13 +22,12 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.endsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @WebFluxTest(controllers = OwnerController.class)
-class OwnerControllerTest {
+class OwnerControllerTest extends ControllerTestParent {
 
     private static final String ENDPOINT_FIND_OWNER_FORM = "/owners/find";
     private static final String ENDPOINT_ADD_OWNER_FORM = "/owners/new";
@@ -36,10 +35,10 @@ class OwnerControllerTest {
     private static final String ENDPOINT_OWNER_DETAILS_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e";
     private static final String ENDPOINT_OWNER_DETAILS_INVALID = "/owners/123";
 
-    private static final String EXPECTED_HTML_FIND_OWNER = "<h2>Find Owners</h2>";
-    private static final String EXPECTED_HMTL_ADD_OWNER = "<h2>Owner</h2>";
-    private static final String EXPECTED_HTML_OWNER_DETAILS = "<h2>Owner Information</h2>";
-    private static final String EXPECTED_HTML_OWNER_LIST = "<h2>Owners</h2>";
+    private static final String EXPECTED_VIEW_FIND_OWNER = "owners/findOwners";
+    private static final String EXPECTED_VIEW_ADD_OWNER = "owners/createOrUpdateOwnerForm";
+    private static final String EXPECTED_VIEW_OWNER_DETAILS = "owners/ownerDetails";
+    private static final String EXPECTED_VIEW_OWNER_LIST = "owners/ownersList";
 
     private static final String QUERY_PARAM_FIND_OWNERS = "lastName";
 
@@ -56,7 +55,7 @@ class OwnerControllerTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
-        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_HTML_FIND_OWNER));
+        this.verifyView(EXPECTED_VIEW_FIND_OWNER, result);
     }
 
     @Test
@@ -67,7 +66,7 @@ class OwnerControllerTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
-        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_HMTL_ADD_OWNER));
+        this.verifyView(EXPECTED_VIEW_ADD_OWNER, result);
     }
 
     @Test
@@ -111,6 +110,7 @@ class OwnerControllerTest {
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
         assertEquals(ENDPOINT_ADD_OWNER_FORM, result.getUriTemplate());
+        this.verifyView(EXPECTED_VIEW_ADD_OWNER, result);
     }
 
     @Test
@@ -131,6 +131,7 @@ class OwnerControllerTest {
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
         assertEquals(ENDPOINT_ADD_OWNER_FORM, result.getUriTemplate());
+        this.verifyView(EXPECTED_VIEW_ADD_OWNER, result);
     }
 
     @Test
@@ -150,7 +151,7 @@ class OwnerControllerTest {
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
         verify(this.ownerService, times(1)).getById(any());
-        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_HTML_OWNER_DETAILS));
+        this.verifyView(EXPECTED_VIEW_OWNER_DETAILS, result);
     }
 
     @Test
@@ -208,7 +209,7 @@ class OwnerControllerTest {
 
         // then
         verify(this.ownerService, times(1)).findAll();
-        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_HTML_OWNER_LIST));
+        this.verifyView(EXPECTED_VIEW_OWNER_LIST, result);
     }
 
     @Test
@@ -229,7 +230,7 @@ class OwnerControllerTest {
 
         // then
         verify(this.ownerService, times(1)).findByLastNameFragment(anyString());
-        assertTrue(new String(result.getResponseBodyContent()).contains(EXPECTED_HTML_OWNER_LIST));
+        this.verifyView(EXPECTED_VIEW_OWNER_LIST, result);
     }
 
     private MultiValueMap<String, String> ownerToFormDataMap(Owner owner) {
