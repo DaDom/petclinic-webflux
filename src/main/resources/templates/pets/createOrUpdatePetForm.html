@@ -3,8 +3,11 @@
 
 <body>
 
+<!-- Used for tests, do not remove -->
+<!-- VIEW:pets/createOrUpdatePetForm -->
+
   <h2>
-    <th:block th:if="${pet['new']}">New </th:block>
+    <th:block th:if="${isNew}">New </th:block>
     Pet
   </h2>
   <form th:object="${pet}" class="form-horizontal" method="post">
@@ -26,7 +29,7 @@
     <div class="form-group">
       <div class="col-sm-offset-2 col-sm-10">
         <button
-          th:with="text=${pet['new']} ? 'Add Pet' : 'Update Pet'"
+          th:with="text=${isNew} ? 'Add Pet' : 'Update Pet'"
           class="btn btn-default" type="submit" th:text="${text}">Add
           Pet</button>
       </div>

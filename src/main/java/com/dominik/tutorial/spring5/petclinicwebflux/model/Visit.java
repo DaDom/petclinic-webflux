@@ -21,4 +21,8 @@ public class Visit extends BaseEntity {
         this.date = date;
         this.description = description;
     }
+
+    public Visit() {
+        super();
+    }
 }

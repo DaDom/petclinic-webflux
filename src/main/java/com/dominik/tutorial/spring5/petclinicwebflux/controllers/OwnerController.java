@@ -35,6 +35,7 @@ public class OwnerController extends BaseController {
     @InitBinder
     public void avoidIdFieldProcessing(WebDataBinder webDataBinder) {
         webDataBinder.setDisallowedFields("id");
+        webDataBinder.setDisallowedFields("pets");
         this.dataBinder = webDataBinder;
     }
 

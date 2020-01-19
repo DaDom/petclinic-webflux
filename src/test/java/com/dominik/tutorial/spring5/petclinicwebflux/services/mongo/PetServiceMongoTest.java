@@ -3,6 +3,7 @@ package com.dominik.tutorial.spring5.petclinicwebflux.services.mongo;
 import com.dominik.tutorial.spring5.petclinicwebflux.exceptions.EntityNotFoundException;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
+import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -136,17 +138,27 @@ class PetServiceMongoTest {
         // given
         UUID ownerId = UUID.randomUUID();
         UUID petId = UUID.randomUUID();
-        String petName = "PET";
 
-        Pet pet = Pet.builder()
+        Pet existingPet = Pet.builder()
                 .id(petId)
-                .name(petName)
+                .name("Rufus")
+                .petType("Cat")
+                .birthDate(LocalDate.of(2012, 12, 19))
+                .visits(List.of(new Visit(), new Visit()))
+                .build();
+
+        Pet petFormData = Pet.builder()
+                .id(petId)
+                .name("NewPetName")
+                .petType("Dog")
+                .birthDate(LocalDate.of(2015, 2, 9))
+                .visits(new ArrayList<>())
                 .build();
 
         List<Pet> petList = new ArrayList<>();
         petList.add(Pet.builder().id(UUID.randomUUID()).build());
         petList.add(Pet.builder().id(UUID.randomUUID()).build());
-        petList.add(Pet.builder().id(petId).build());
+        petList.add(existingPet);
         Owner owner = Owner.builder()
                 .id(ownerId)
                 .pets(petList)
@@ -155,13 +167,16 @@ class PetServiceMongoTest {
         when(this.ownerService.save(eq(owner))).thenReturn(Mono.just(owner));
 
         // when
-        Pet result = this.petService.save(ownerId, pet).block();
+        Pet result = this.petService.save(ownerId, petFormData).block();
         Pet updatedPet = this.petService.findById(ownerId, petId).block();
 
         // then
         assertNotNull(result);
         assertEquals(3, owner.getPets().size());
-        assertEquals(petName, updatedPet.getName());
+        assertEquals("NewPetName", updatedPet.getName());
+        assertEquals("Dog", updatedPet.getPetType());
+        assertEquals(2, updatedPet.getVisits().size());
+        assertEquals(2015, updatedPet.getBirthDate().getYear());
         verify(this.ownerService, times(1)).save(eq(owner));
     }
 

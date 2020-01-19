@@ -1,6 +1,8 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.controllers;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
+import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
+import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +21,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.endsWith;
@@ -145,6 +149,37 @@ class OwnerControllerTest extends ControllerTestParent {
         UUID id = UUID.randomUUID();
         Owner owner = Owner.builder()
                 .id(id)
+                .firstName("Dominik")
+                .lastName("Picker")
+                .city("City")
+                .address("Address")
+                .telephone("Phone")
+                .pets(List.of(
+                        Pet.builder()
+                                .name("Pet 1")
+                                .petType("Cat")
+                                .birthDate(LocalDate.now())
+                                .visits(List.of(
+                                        Visit.builder()
+                                                .date(LocalDate.now())
+                                                .description("Visit")
+                                                .id(UUID.randomUUID())
+                                                .build()
+                                ))
+                                .build(),
+                        Pet.builder()
+                                .name("Pet 2")
+                                .petType("Dog")
+                                .birthDate(LocalDate.now())
+                                .visits(List.of(
+                                        Visit.builder()
+                                                .date(LocalDate.now())
+                                                .description("Visit")
+                                                .id(UUID.randomUUID())
+                                                .build()
+                                ))
+                                .build()
+                ))
                 .build();
         when(this.ownerService.getById(any())).thenReturn(Mono.just(owner));
 

@@ -30,8 +30,15 @@ public class PetServiceMongo implements PetService {
 
     @Override
     public Mono<Pet> save(UUID ownerId, Pet pet) {
-        return this.ownerService.getById(ownerId)
-                .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId.toString())))
+        Mono<Owner> ownerMono = this.ownerService.getById(ownerId)
+                .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId.toString())));
+        return ownerMono
+                .flatMap(o -> this.findById(ownerId, pet.getId()))
+                .switchIfEmpty(Mono.just(pet))
+                .flatMap(p -> {
+                    pet.setVisits(p.getVisits());
+                    return ownerMono;
+                })
                 .flatMap(o -> this.removePetFromOwner(o, pet.getId()))
                 .flatMap(o -> this.addPetToOwnerAndSave(o, pet));
     }
