@@ -181,6 +181,59 @@ class PetServiceMongoTest {
     }
 
     @Test
+    void testAddVisit() {
+        // given
+        UUID ownerId = UUID.randomUUID();
+        UUID petId = UUID.randomUUID();
+        UUID visitId = UUID.randomUUID();
+
+        Visit visit = Visit.builder()
+                .id(visitId)
+                .date(LocalDate.of(2011, 4, 16))
+                .description("Doctor Visit")
+                .build();
+
+        Pet existingPet = Pet.builder()
+                .id(petId)
+                .name("Rufus")
+                .petType("Cat")
+                .birthDate(LocalDate.of(2012, 12, 19))
+                .visits(new ArrayList<>())
+                .build();
+
+        Pet petFormData = Pet.builder()
+                .id(petId)
+                .name("Rufus")
+                .petType("Cat")
+                .birthDate(LocalDate.of(2012, 12, 19))
+                .visits(List.of(visit))
+                .build();
+
+        List<Pet> petList = new ArrayList<>();
+        petList.add(existingPet);
+        Owner owner = Owner.builder()
+                .id(ownerId)
+                .pets(petList)
+                .build();
+        when(this.ownerService.getById(eq(ownerId))).thenReturn(Mono.just(owner));
+        when(this.ownerService.save(eq(owner))).thenReturn(Mono.just(owner));
+
+        // when
+        Pet result = this.petService.save(ownerId, petFormData).block();
+        Pet updatedPet = this.petService.findById(ownerId, petId).block();
+
+        // then
+        assertNotNull(result);
+        assertEquals(1, owner.getPets().size());
+        assertEquals("Rufus", updatedPet.getName());
+        assertEquals("Cat", updatedPet.getPetType());
+        assertEquals(1, updatedPet.getVisits().size());
+        assertEquals("Doctor Visit", updatedPet.getVisits().get(0).getDescription());
+        assertEquals(2012, updatedPet.getBirthDate().getYear());
+        verify(this.ownerService, times(1)).save(eq(owner));
+    }
+
+    @Test
     void testDeleteExisting() {
         // given
         UUID ownerId = UUID.randomUUID();

@@ -3,14 +3,13 @@ package com.dominik.tutorial.spring5.petclinicwebflux.services.mongo;
 import com.dominik.tutorial.spring5.petclinicwebflux.exceptions.EntityNotFoundException;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
+import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class PetServiceMongo implements PetService {
@@ -36,7 +35,7 @@ public class PetServiceMongo implements PetService {
                 .flatMap(o -> this.findById(ownerId, pet.getId()))
                 .switchIfEmpty(Mono.just(pet))
                 .flatMap(p -> {
-                    pet.setVisits(p.getVisits());
+                    pet.setVisits(this.mergeVisits(pet.getVisits(), p.getVisits()));
                     return ownerMono;
                 })
                 .flatMap(o -> this.removePetFromOwner(o, pet.getId()))
@@ -76,5 +75,24 @@ public class PetServiceMongo implements PetService {
         }
         o.setPets(newPetList);
         return Mono.just(o);
+    }
+
+    private List<Visit> mergeVisits(List<Visit> list1, List<Visit> list2) {
+        List<Visit> mergedList = new ArrayList<>();
+        Set<String> processedIds = new HashSet<>();
+        for (Visit v : list1) {
+            if (!processedIds.contains(v.getId().toString())) {
+                mergedList.add(v);
+                processedIds.add(v.getId().toString());
+            }
+        }
+        for (Visit v : list2) {
+            if (!processedIds.contains(v.getId().toString())) {
+                mergedList.add(v);
+                processedIds.add(v.getId().toString());
+            }
+        }
+
+        return mergedList;
     }
 }
