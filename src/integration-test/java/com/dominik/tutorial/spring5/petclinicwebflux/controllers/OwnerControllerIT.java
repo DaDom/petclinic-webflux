@@ -3,9 +3,13 @@ package com.dominik.tutorial.spring5.petclinicwebflux.controllers;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
+import com.dominik.tutorial.spring5.petclinicwebflux.repositories.OwnerRepository;
+import com.dominik.tutorial.spring5.petclinicwebflux.repositories.PetRepository;
+import com.dominik.tutorial.spring5.petclinicwebflux.repositories.VisitRepository;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VisitService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -33,13 +37,26 @@ public class OwnerControllerIT {
     private final PetService petService;
     private final VisitService visitService;
     private final WebTestClient webTestClient;
+    private final OwnerRepository ownerRepository;
+    private final PetRepository petRepository;
+    private final VisitRepository visitRepository;
 
     @Autowired
-    public OwnerControllerIT(OwnerService ownerService, PetService petService, VisitService visitService, WebTestClient webTestClient) {
+    public OwnerControllerIT(OwnerService ownerService, PetService petService, VisitService visitService, WebTestClient webTestClient, OwnerRepository ownerRepository, PetRepository petRepository, VisitRepository visitRepository) {
         this.ownerService = ownerService;
         this.petService = petService;
         this.visitService = visitService;
         this.webTestClient = webTestClient;
+        this.ownerRepository = ownerRepository;
+        this.petRepository = petRepository;
+        this.visitRepository = visitRepository;
+    }
+
+    @BeforeEach
+    void setUp() {
+        this.ownerRepository.deleteAll().block();
+        this.petRepository.deleteAll().block();
+        this.visitRepository.deleteAll().block();
     }
 
     @Test
@@ -116,7 +133,7 @@ public class OwnerControllerIT {
         // then
         Owner savedOwner = this.ownerService.findAll().blockFirst();
         assertNotNull(savedOwner);
-        assertThat(owner).isEqualToIgnoringGivenFields(savedOwner, "id");
+        assertThat(owner).isEqualToIgnoringGivenFields(savedOwner, "id", "pets");
     }
 
     @Test

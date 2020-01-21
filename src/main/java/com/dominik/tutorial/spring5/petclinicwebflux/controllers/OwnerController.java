@@ -112,6 +112,7 @@ public class OwnerController extends BaseController {
             model.addAttribute(MODEL_ATTRIBUTE_IS_NEW, false);
             return Mono.just(VIEW_CREATE_OR_UPDATE_OWNER_FORM);
         }
+
         return owner
                 .flatMap(o -> {
                     o.setId(ownerUUID);
