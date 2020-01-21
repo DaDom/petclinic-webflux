@@ -4,6 +4,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.constraints.NotBlank;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
+@Document
 public class Pet extends BaseEntity {
 
     @NotNull(message = "Name must be entered")
@@ -32,14 +35,18 @@ public class Pet extends BaseEntity {
     @NotBlank(message = "Pet type may not be blank")
     private String petType;
 
+    @Transient
     private List<Visit> visits = new ArrayList<>();
 
+    private UUID ownerId;
+
     @Builder
-    public Pet(UUID id, String name, LocalDate birthDate, String petType, List<Visit> visits) {
+    public Pet(UUID id, String name, LocalDate birthDate, String petType, List<Visit> visits, UUID ownerId) {
         super(id);
         this.name = name;
         this.birthDate = birthDate;
         this.petType = petType;
+        this.ownerId = ownerId;
         if (visits != null) {
             this.visits = visits;
         }

@@ -43,6 +43,7 @@ public class PetController extends BaseController {
     public void disallowIdBinding(WebDataBinder dataBinder) {
         dataBinder.setDisallowedFields("id");
         dataBinder.setDisallowedFields("visits");
+        dataBinder.setDisallowedFields("ownerId");
         this.dataBinder = dataBinder;
     }
 
@@ -54,7 +55,7 @@ public class PetController extends BaseController {
     }
 
     @ModelAttribute(MODEL_ATTRIBUTE_PET_TYPES)
-    public Flux<String> addOwner() {
+    public Flux<String> addPetTypes() {
         return this.petTypeService.findAll();
     }
 
@@ -88,7 +89,7 @@ public class PetController extends BaseController {
 
         return this.ownerService.getById(ownerUUID)
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)))
-                .flatMap(o -> this.petService.findById(ownerUUID, petUUID))
+                .flatMap(o -> this.petService.findByIdAndOwner(petUUID, ownerUUID))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Pet.class, petId)))
                 .flatMap(p -> {
                     model.addAttribute(MODEL_ATTRIBUTE_PET, p);
@@ -111,7 +112,7 @@ public class PetController extends BaseController {
 
         return this.ownerService.getById(ownerUUID)
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)))
-                .flatMap(o -> this.petService.findById(ownerUUID, petUUID))
+                .flatMap(o -> this.petService.findByIdAndOwner(petUUID, ownerUUID))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Pet.class, petId)))
                 .flatMap(p -> {
                     pet.setId(p.getId());

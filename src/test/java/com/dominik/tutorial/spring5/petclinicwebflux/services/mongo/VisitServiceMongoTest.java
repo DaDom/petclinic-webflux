@@ -1,9 +1,8 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.services.mongo;
 
-import com.dominik.tutorial.spring5.petclinicwebflux.exceptions.EntityNotFoundException;
-import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
+import com.dominik.tutorial.spring5.petclinicwebflux.repositories.VisitRepository;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,16 +10,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,29 +27,10 @@ class VisitServiceMongoTest {
 
     @Mock
     private PetService petService;
+    @Mock
+    private VisitRepository visitRepository;
     @InjectMocks
     private VisitServiceMongo visitService;
-
-    @Test
-    void testCreateVisitOwnerNotExists() {
-        // given
-        when(this.petService.findById(any(), any())).thenReturn(
-                Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, UUID.randomUUID().toString())));
-
-        // when / then
-        assertThrows(EntityNotFoundException.class,
-                () -> this.visitService.createVisit(UUID.randomUUID(), UUID.randomUUID(), new Visit()).block());
-    }
-
-    @Test
-    void testCreateVisitPetNotExists() {
-        // given
-        when(this.petService.findById(any(), any())).thenReturn(Mono.empty());
-
-        // when / then
-        assertThrows(EntityNotFoundException.class,
-                () -> this.visitService.createVisit(UUID.randomUUID(), UUID.randomUUID(), new Visit()).block());
-    }
 
     @Test
     void testCreateVisitValid() {
@@ -69,19 +49,34 @@ class VisitServiceMongoTest {
                 .description("OneVisit")
                 .date(LocalDate.of(2015, 12, 13))
                 .build();
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(pet));
-        when(this.petService.save(any(), any())).thenReturn(Mono.just(pet));
-        ArgumentCaptor captor = ArgumentCaptor.forClass(Pet.class);
+        when(this.visitRepository.save(any())).thenReturn(Mono.just(visit));
+        ArgumentCaptor captor = ArgumentCaptor.forClass(Visit.class);
 
         // when
-        Visit result = this.visitService.createVisit(ownerId, petId, visit).block();
+        Visit result = this.visitService.createVisit(petId, visit).block();
 
         // then
-        verify(this.petService, times(1)).save(eq(ownerId), (Pet)captor.capture());
-        Pet capturedPet = (Pet)captor.getValue();
-        assertEquals(1, capturedPet.getVisits().size());
-        assertThat(pet).isEqualToIgnoringGivenFields(capturedPet, "visits");
-        assertThat(result).isEqualToComparingFieldByField(visit);
-        assertThat(capturedPet.getVisits().get(0)).isEqualToComparingFieldByField(visit);
+        verify(this.visitRepository, times(1)).save((Visit)captor.capture());
+        Visit capturedVisit = (Visit)captor.getValue();
+        assertEquals(pet.getId(), capturedVisit.getPetId());
+        assertThat(result).isEqualToIgnoringGivenFields(visit, "petId");
+    }
+
+    @Test
+    void testFindByPet() {
+        // given
+        UUID petId = UUID.randomUUID();
+        Visit visit = Visit.builder()
+                .date(LocalDate.now())
+                .description("Test Visit")
+                .build();
+        when(this.visitRepository.findByPetId(eq(petId))).thenReturn(Flux.just(visit));
+
+        // when
+        List<Visit> result = this.visitService.findByPet(petId).collectList().block();
+
+        // then
+        assertEquals(1, result.size());
+        assertThat(visit).isEqualToComparingFieldByField(result.get(0));
     }
 }

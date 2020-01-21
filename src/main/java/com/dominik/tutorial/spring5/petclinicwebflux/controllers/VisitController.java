@@ -12,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.DataBinder;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -24,6 +25,7 @@ public class VisitController extends BaseController {
 
     private static final String MODEL_ATTRIBUTE_OWNER = "owner";
     private static final String MODEL_ATTRIBUTE_PET = "pet";
+    private static final String MODEL_ATTRIBUTE_PET_VISITS = "petVisits";
     private static final String MODEL_ATTRIBUTE_VISIT = "visit";
 
     private final VisitService visitService;
@@ -40,6 +42,7 @@ public class VisitController extends BaseController {
     @InitBinder
     public void disallowIdBinding(WebDataBinder dataBinder) {
         dataBinder.setDisallowedFields("id");
+        dataBinder.setDisallowedFields("petId");
         this.dataBinder = dataBinder;
     }
 
@@ -50,9 +53,15 @@ public class VisitController extends BaseController {
 
     @ModelAttribute(MODEL_ATTRIBUTE_PET)
     public Mono<Pet> addPetToModel(@PathVariable String ownerId, @PathVariable String petId) {
-        return this.petService.findById(
-                this.fromStringOrThrow(ownerId, Owner.class),
-                this.fromStringOrThrow(petId, Owner.class));
+        return this.petService.findByIdAndOwner(
+                this.fromStringOrThrow(petId, Owner.class),
+                this.fromStringOrThrow(ownerId, Owner.class));
+    }
+
+    @ModelAttribute(MODEL_ATTRIBUTE_PET_VISITS)
+    public Flux<Visit> addPetVisitsToModel(@PathVariable String petId) {
+        UUID petUUID = this.fromStringOrThrow(petId, Pet.class);
+        return this.visitService.findByPet(petUUID);
     }
 
     @GetMapping({"", "/"})
@@ -62,7 +71,7 @@ public class VisitController extends BaseController {
 
         return this.ownerService.getById(ownerUUID)
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)))
-                .flatMap(o -> this.petService.findById(ownerUUID, petUUID))
+                .flatMap(o -> this.petService.findByIdAndOwner(petUUID, ownerUUID))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Pet.class, petId)))
                 .flatMap(p -> {
                     model.addAttribute(MODEL_ATTRIBUTE_VISIT, new Visit());
@@ -83,9 +92,9 @@ public class VisitController extends BaseController {
 
         return this.ownerService.getById(ownerUUID)
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)))
-                .flatMap(o -> this.petService.findById(ownerUUID, petUUID))
+                .flatMap(o -> this.petService.findByIdAndOwner(petUUID, ownerUUID))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Pet.class, petId)))
-                .flatMap(p -> this.visitService.createVisit(ownerUUID, petUUID, visit))
+                .flatMap(p -> this.visitService.createVisit(petUUID, visit))
                 .flatMap(v -> Mono.just("redirect:/owners/" + ownerId));
     }
 }

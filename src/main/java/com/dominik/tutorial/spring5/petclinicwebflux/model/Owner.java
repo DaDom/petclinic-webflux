@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotBlank;
@@ -12,9 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Document
 @Getter
 @Setter
-@Document
 public class Owner extends Person {
 
     @NotNull(message = "Address must be entered")
@@ -32,6 +33,7 @@ public class Owner extends Person {
     @Length(min = 1, max = 200, message = "Telephone number length must be between 1 and 200")
     private String telephone;
 
+    @Transient
     private List<Pet> pets = new ArrayList<>();
 
     @Builder

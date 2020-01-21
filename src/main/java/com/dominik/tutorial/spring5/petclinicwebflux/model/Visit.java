@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.constraints.NotBlank;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 @Setter
 @Getter
+@Document
 public class Visit extends BaseEntity {
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")
@@ -25,6 +27,8 @@ public class Visit extends BaseEntity {
     @NotBlank(message = "Description may not be blank")
     @Length(min = 1, max = 500, message = "Description length must be between 1 and 500")
     private String description;
+
+    private UUID petId;
 
     @Builder
     public Visit(UUID id, LocalDate date, String description) {

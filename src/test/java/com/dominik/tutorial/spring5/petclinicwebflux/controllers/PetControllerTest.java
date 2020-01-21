@@ -23,7 +23,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -190,7 +189,7 @@ class PetControllerTest extends ControllerTestParent {
     void testShowEditPetFormOwnerExistsPetExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(new Pet()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
 
         // when
         FluxExchangeResult result = this.webTestClient.get()
@@ -225,7 +224,7 @@ class PetControllerTest extends ControllerTestParent {
     void testShowEditPetFormOwnerExistsPetNotExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.empty());
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.empty());
 
         // when
         FluxExchangeResult result = this.webTestClient.get()
@@ -289,7 +288,7 @@ class PetControllerTest extends ControllerTestParent {
                 .build();
         ArgumentCaptor captor = ArgumentCaptor.forClass(Pet.class);
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(pet));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(pet));
         when(this.petService.save(any(), any())).thenReturn(Mono.just(pet));
 
         // when
@@ -311,13 +310,12 @@ class PetControllerTest extends ControllerTestParent {
     void testEditPetOwnerExistsPetExistsInvalid() {
         // given
         Pet pet = Pet.builder()
-                .visits(new ArrayList<>())
                 .birthDate(LocalDate.now())
                 .name("MyCat")
                 .id(UUID.randomUUID())
                 .build();
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.empty());
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.empty());
 
         // when
         FluxExchangeResult result = this.webTestClient.post()
@@ -353,14 +351,13 @@ class PetControllerTest extends ControllerTestParent {
     void testEditPetOwnerExistsPetNotExists() {
         // given
         Pet pet = Pet.builder()
-                .visits(new ArrayList<>())
                 .petType("Cat")
                 .birthDate(LocalDate.now())
                 .name("MyCat")
                 .id(UUID.randomUUID())
                 .build();
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.empty());
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.empty());
 
         // when
         FluxExchangeResult result = this.webTestClient.post()

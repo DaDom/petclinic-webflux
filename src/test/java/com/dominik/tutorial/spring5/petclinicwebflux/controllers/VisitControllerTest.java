@@ -54,7 +54,7 @@ class VisitControllerTest extends ControllerTestParent {
     void testShowCreateVisitFormValid() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(new Pet()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
 
         // when / then
         FluxExchangeResult result = this.webTestClient.get()
@@ -94,7 +94,7 @@ class VisitControllerTest extends ControllerTestParent {
     void testShowCreateVisitOwnerNotExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.empty());
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(new Pet()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
 
         // when / then
         FluxExchangeResult result = this.webTestClient.get()
@@ -110,7 +110,7 @@ class VisitControllerTest extends ControllerTestParent {
     void testShowCreateVisitPetNotExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.empty());
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.empty());
 
         // when / then
         FluxExchangeResult result = this.webTestClient.get()
@@ -134,8 +134,8 @@ class VisitControllerTest extends ControllerTestParent {
                 .build();
         Pet pet = new Pet();
         when(this.ownerService.getById(any())).thenReturn(Mono.just(Owner.builder().id(ownerUUID).build()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(pet));
-        when(this.visitService.createVisit(any(), any(), any())).thenReturn(Mono.just(visit));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(pet));
+        when(this.visitService.createVisit(any(), any())).thenReturn(Mono.just(visit));
         ArgumentCaptor captor = ArgumentCaptor.forClass(Visit.class);
 
         // when
@@ -148,7 +148,7 @@ class VisitControllerTest extends ControllerTestParent {
                 .returnResult(FluxExchangeResult.class);
 
         // then
-        verify(this.visitService, times(1)).createVisit(any(), any(), (Visit)captor.capture());
+        verify(this.visitService, times(1)).createVisit(any(), (Visit)captor.capture());
         Visit capturedVisit = (Visit)captor.getValue();
         assertThat(visit).isEqualToIgnoringGivenFields(capturedVisit, "id");
     }
@@ -162,7 +162,7 @@ class VisitControllerTest extends ControllerTestParent {
                 .id(visitUUID)
                 .date(LocalDate.of(2015, 12, 1))
                 .build();
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(new Pet()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
 
         // when
@@ -182,7 +182,7 @@ class VisitControllerTest extends ControllerTestParent {
     void testCreateVisitOwnerNotExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.empty());
-        when(this.petService.findById(any(), any())).thenReturn(Mono.just(new Pet()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
         Visit visit = Visit.builder()
                 .id(UUID.randomUUID())
                 .description("Description")
@@ -204,7 +204,7 @@ class VisitControllerTest extends ControllerTestParent {
     void testCreateVisitPetNotExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findById(any(), any())).thenReturn(Mono.empty());
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.empty());
         Visit visit = Visit.builder()
                 .id(UUID.randomUUID())
                 .description("Description")

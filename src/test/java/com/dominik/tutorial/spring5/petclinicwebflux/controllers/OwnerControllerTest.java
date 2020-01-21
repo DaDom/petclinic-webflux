@@ -147,6 +147,32 @@ class OwnerControllerTest extends ControllerTestParent {
     void testOwnerDetailsFound() {
         // given
         UUID id = UUID.randomUUID();
+        List<Pet> petList = List.of(
+                Pet.builder()
+                        .name("Pet 1")
+                        .petType("Cat")
+                        .birthDate(LocalDate.now())
+                        .visits(List.of(
+                                Visit.builder()
+                                        .date(LocalDate.now())
+                                        .description("Visit")
+                                        .id(UUID.randomUUID())
+                                        .build()
+                        ))
+                        .build(),
+                Pet.builder()
+                        .name("Pet 2")
+                        .petType("Dog")
+                        .birthDate(LocalDate.now())
+                        .visits(List.of(
+                                Visit.builder()
+                                        .date(LocalDate.now())
+                                        .description("Visit")
+                                        .id(UUID.randomUUID())
+                                        .build()
+                        ))
+                        .build()
+        );
         Owner owner = Owner.builder()
                 .id(id)
                 .firstName("Dominik")
@@ -154,32 +180,7 @@ class OwnerControllerTest extends ControllerTestParent {
                 .city("City")
                 .address("Address")
                 .telephone("Phone")
-                .pets(List.of(
-                        Pet.builder()
-                                .name("Pet 1")
-                                .petType("Cat")
-                                .birthDate(LocalDate.now())
-                                .visits(List.of(
-                                        Visit.builder()
-                                                .date(LocalDate.now())
-                                                .description("Visit")
-                                                .id(UUID.randomUUID())
-                                                .build()
-                                ))
-                                .build(),
-                        Pet.builder()
-                                .name("Pet 2")
-                                .petType("Dog")
-                                .birthDate(LocalDate.now())
-                                .visits(List.of(
-                                        Visit.builder()
-                                                .date(LocalDate.now())
-                                                .description("Visit")
-                                                .id(UUID.randomUUID())
-                                                .build()
-                                ))
-                                .build()
-                ))
+                .pets(petList)
                 .build();
         when(this.ownerService.getById(any())).thenReturn(Mono.just(owner));
 

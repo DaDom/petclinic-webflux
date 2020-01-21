@@ -1,7 +1,9 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.services.mongo;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
+import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
 import com.dominik.tutorial.spring5.petclinicwebflux.repositories.OwnerRepository;
+import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.Mockito.*;
@@ -23,6 +26,8 @@ class OwnerServiceMongoTest {
 
     @Mock
     private OwnerRepository ownerRepository;
+    @Mock
+    private PetService petService;
     @InjectMocks
     private OwnerServiceMongo ownerServiceMongo;
 
@@ -42,6 +47,7 @@ class OwnerServiceMongoTest {
                 .lastName("Huchzermeyer")
                 .build();
         when(this.ownerRepository.findAll()).thenReturn(Flux.just(owner1, owner2));
+        when(this.petService.findByOwnerId(any())).thenReturn(Flux.just(new Pet()));
 
         // when
         Flux<Owner> result = this.ownerServiceMongo.findAll();
@@ -50,12 +56,10 @@ class OwnerServiceMongoTest {
         assertNotNull(result);
         List<Owner> resultList = result.collectList().block();
         assertEquals(2, resultList.size());
-        assertEquals(id1, resultList.get(0).getId());
-        assertEquals("Dominik", resultList.get(0).getFirstName());
-        assertEquals("Picker", resultList.get(0).getLastName());
-        assertEquals(id2, resultList.get(1).getId());
-        assertEquals("Dennis", resultList.get(1).getFirstName());
-        assertEquals("Huchzermeyer", resultList.get(1).getLastName());
+        assertThat(owner1).isEqualToIgnoringGivenFields(resultList.get(0), "pets");
+        assertThat(owner2).isEqualToIgnoringGivenFields(resultList.get(1), "pets");
+        assertEquals(1, resultList.get(0).getPets().size());
+        assertEquals(1, resultList.get(1).getPets().size());
         verify(this.ownerRepository, times(1)).findAll();
     }
 
@@ -82,8 +86,9 @@ class OwnerServiceMongoTest {
                 .firstName("Dominik")
                 .lastName("Picker")
                 .build();
-        when(this.ownerRepository.findById(id1)).thenReturn(Mono.just(owner));
+        when(this.ownerRepository.findById(eq(id1))).thenReturn(Mono.just(owner));
         when(this.ownerRepository.findById(not(eq(id1)))).thenReturn(Mono.empty());
+        when(this.petService.findByOwnerId(any())).thenReturn(Flux.empty());
 
         // when
         Mono<Owner> resultMonoExists = this.ownerServiceMongo.getById(id1);
@@ -102,8 +107,9 @@ class OwnerServiceMongoTest {
     @Test
     void testSave() {
         // given
+        UUID ownerId = UUID.randomUUID();
         Owner owner = Owner.builder()
-                .id(null)
+                .id(ownerId)
                 .firstName("Dominik")
                 .lastName("Picker")
                 .address("Address")
@@ -114,12 +120,12 @@ class OwnerServiceMongoTest {
         when(this.ownerRepository.save(any())).thenReturn(Mono.just(owner));
 
         // when
-        Mono<Owner> result = this.ownerServiceMongo.save(owner);
+        Owner result = this.ownerServiceMongo.save(owner).block();
 
         // then
-        assertTrue(result.hasElement().block());
-        assertEquals(owner, result.block());
-        verify(this.ownerRepository, times(1)).save(owner);
+        assertNotNull(result);
+        assertEquals(owner, result);
+        verify(this.ownerRepository, times(1)).save(any());
     }
 
     @Test
@@ -135,13 +141,17 @@ class OwnerServiceMongoTest {
                 .pets(new ArrayList<>())
                 .build();
         when(this.ownerRepository.findByLastNameContainingIgnoreCase(anyString())).thenReturn(Flux.just(owner));
+        when(this.petService.findByOwnerId(any())).thenReturn(Flux.just(new Pet()));
 
         // when
         Flux<Owner> result = this.ownerServiceMongo.findByLastNameFragment("anything");
 
         // then
-        assertTrue(result.hasElements().block());
-        assertEquals(owner, result.blockFirst());
+        Owner resultOwner = result.blockFirst();
+        assertNotNull(resultOwner);
+        assertEquals(owner, resultOwner);
+        assertEquals(1, resultOwner.getPets().size());
+        assertThat(owner).isEqualToIgnoringGivenFields(resultOwner, "id", "pets");
         verify(this.ownerRepository, times(1)).findByLastNameContainingIgnoreCase(anyString());
     }
 }
