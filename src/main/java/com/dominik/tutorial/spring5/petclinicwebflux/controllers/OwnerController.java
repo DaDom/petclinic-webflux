@@ -84,9 +84,6 @@ public class OwnerController extends BaseController {
         UUID ownerUUID = this.fromStringOrThrow(ownerId, Owner.class);
         Mono<Owner> owner = this.ownerService.getById(ownerUUID);
 
-        /*Owner own = owner.block();
-        List<Pet> pets = own.getPets().collectList().block();*/
-
         model.addAttribute(MODEL_ATTRIBUTE_OWNER, owner);
         model.addAttribute(MODEL_ATTRIBUTE_IS_NEW, false);
         return owner

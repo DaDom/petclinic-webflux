@@ -1,6 +1,7 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.services.mongo;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
+import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.repositories.PetRepository;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VisitService;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -24,19 +26,19 @@ public class PetServiceMongo implements PetService {
     @Override
     public Mono<Pet> findByIdAndOwner(UUID petId, UUID ownerId) {
         return this.petRepository.findByIdAndOwnerId(petId, ownerId)
-                .flatMap(this::addVisits);
+                .flatMap(p -> this.addVisits(Mono.just(p), petId));
     }
 
     @Override
     public Mono<Pet> findById(UUID petId) {
         return this.petRepository.findById(petId)
-                .flatMap(this::addVisits);
+                .flatMap(p -> this.addVisits(Mono.just(p), petId));
     }
 
     @Override
     public Flux<Pet> findByOwnerId(UUID ownerId) {
         return this.petRepository.findByOwnerId(ownerId)
-                .flatMap(this::addVisits);
+                .flatMap(p -> this.addVisits(Mono.just(p), p.getId()));
     }
 
     @Override
@@ -50,12 +52,14 @@ public class PetServiceMongo implements PetService {
         return this.petRepository.deleteById(petId);
     }
 
-    private Mono<Pet> addVisits(Pet pet) {
-        return this.visitService.findByPet(pet.getId())
-                .collectList()
-                .flatMap(list -> {
-                    pet.setVisits(list);
-                    return Mono.just(pet);
-                });
+    /*
+    TODO: Needs optimization
+    This approach leads to a repository call for each single pet in the result, this is huge.
+    Better approach would be to get all visits in the DB, potentially filtered by the given petUUID(s)
+    and then add them programmatically to the right pet
+     */
+    private Mono<Pet> addVisits(Mono<Pet> petMono, UUID petId) {
+        Mono<List<Visit>> visitListMono = this.visitService.findByPet(petId).collectList();
+        return Mono.zip(petMono, visitListMono, (p, v) -> { p.setVisits(v); return p;});
     }
 }
