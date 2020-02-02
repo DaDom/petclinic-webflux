@@ -1,8 +1,9 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.controllers.webfluxtests;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.controllers.VetController;
-import com.dominik.tutorial.spring5.petclinicwebflux.model.Vet;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VetService;
+import com.dominik.tutorial.spring5.petclinicwebflux.testdata.TestDataFactory;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,11 +15,9 @@ import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
 
-import java.util.List;
-import java.util.UUID;
-
 import static org.mockito.Mockito.when;
 
+@DisplayName("IT: Vet Controller")
 @ExtendWith(MockitoExtension.class)
 @WebFluxTest(controllers = VetController.class)
 class VetControllerIT extends ControllerTestParent {
@@ -28,16 +27,11 @@ class VetControllerIT extends ControllerTestParent {
     @Autowired
     private WebTestClient webTestClient;
 
+    @DisplayName("should list all vets")
     @Test
     void showAllVets() {
         // given
-        Vet vet = Vet.builder()
-                .id(UUID.randomUUID())
-                .firstName("Hans")
-                .lastName("Wurst")
-                .specialties(List.of("S1", "S2"))
-                .build();
-        when(this.vetService.findAll()).thenReturn(Flux.just(vet));
+        when(this.vetService.findAll()).thenReturn(Flux.fromIterable(TestDataFactory.vetsOnly(3).getVets()));
 
         // when
         FluxExchangeResult result = this.webTestClient.get()

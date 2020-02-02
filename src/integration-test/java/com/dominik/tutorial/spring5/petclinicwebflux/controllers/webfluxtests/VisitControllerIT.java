@@ -2,11 +2,14 @@ package com.dominik.tutorial.spring5.petclinicwebflux.controllers.webfluxtests;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.controllers.VisitController;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
-import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VisitService;
+import com.dominik.tutorial.spring5.petclinicwebflux.testdata.TestDataFactory;
+import com.dominik.tutorial.spring5.petclinicwebflux.testutils.FormDataMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -17,23 +20,23 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import reactor.core.publisher.Mono;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@DisplayName("IT: Visit Controller")
 @WebFluxTest(controllers = VisitController.class)
 @ExtendWith(MockitoExtension.class)
 class VisitControllerIT extends ControllerTestParent {
+
+    private static final int NUM_OWNERS = 1;
+    private static final int NUM_PETS = 1;
+    private static final int NUM_VISITS = 3;
+    private static final int NUM_VETS = 1;
 
     private static final String URL_SHOW_CREATE_VISIT_FORM_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e/pets/82ee7568-c925-43ae-ae96-a6d3f96e834e/visits/new";
     private static final String URL_SHOW_CREATE_VISIT_FORM_INVALID_OWNER = "/owners/123/pets/82ee7568-c925-43ae-ae96-a6d3f96e834e/visits/new";
@@ -50,12 +53,19 @@ class VisitControllerIT extends ControllerTestParent {
     private VisitService visitService;
     @Autowired
     private WebTestClient webTestClient;
+    private TestDataFactory testDataFactory;
 
+    @BeforeEach
+    void setUp() {
+        this.testDataFactory = new TestDataFactory(NUM_OWNERS, NUM_PETS, NUM_VISITS, NUM_VETS);
+    }
+
+    @DisplayName("should show create visit form")
     @Test
     void testShowCreateVisitFormValid() {
         // given
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
-        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
+        when(this.ownerService.getById(any())).thenReturn(Mono.just(this.testDataFactory.getOwner()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(this.testDataFactory.getPet()));
 
         // when / then
         FluxExchangeResult result = this.webTestClient.get()
@@ -67,6 +77,7 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_SHOW_CREATE_VISIT_FORM, result);
     }
 
+    @DisplayName("should return 400 when showing create visit form for invalid owner uuid")
     @Test
     void testShowCreateVisitFormInvalidOwnerUUID() {
         // when / then
@@ -79,6 +90,7 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
+    @DisplayName("should return 400 when showing create visit form for invalid pet uuid")
     @Test
     void testShowCreateVisitFormInvalidPetUUID() {
         // when / then
@@ -91,11 +103,12 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
+    @DisplayName("should return 404 when showing create visit form for non-existing owner")
     @Test
     void testShowCreateVisitOwnerNotExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.empty());
-        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(this.testDataFactory.getPet()));
 
         // when / then
         FluxExchangeResult result = this.webTestClient.get()
@@ -107,10 +120,11 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
+    @DisplayName("should return 404 when showing create visit form for non-existing pet")
     @Test
     void testShowCreateVisitPetNotExists() {
         // given
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
+        when(this.ownerService.getById(any())).thenReturn(Mono.just(this.testDataFactory.getOwner()));
         when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.empty());
 
         // when / then
@@ -123,29 +137,24 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
+    @DisplayName("should create visit with valid input")
     @Test
     void testCreateVisitValid() {
         // given
-        UUID visitUUID = UUID.randomUUID();
-        UUID ownerUUID = UUID.fromString("82ee7568-c925-43ae-ae96-a6d3f96e834e");
-        Visit visit = Visit.builder()
-                .id(visitUUID)
-                .description("Description")
-                .date(LocalDate.of(2015, 12, 1))
-                .build();
-        Pet pet = new Pet();
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(Owner.builder().id(ownerUUID).build()));
-        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(pet));
+        Owner owner = this.testDataFactory.getOwner();
+        Visit visit = this.testDataFactory.getVisit();
+        when(this.ownerService.getById(any())).thenReturn(Mono.just(owner));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(this.testDataFactory.getPet()));
         when(this.visitService.createVisit(any(), any())).thenReturn(Mono.just(visit));
         ArgumentCaptor captor = ArgumentCaptor.forClass(Visit.class);
 
         // when
         FluxExchangeResult result = this.webTestClient.post()
                 .uri(URL_SHOW_CREATE_VISIT_FORM_VALID)
-                .body(BodyInserters.fromFormData(this.visitToFormData(visit)))
+                .body(BodyInserters.fromFormData(FormDataMapper.visitToFormData(visit)))
                 .exchange()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().value("Location", endsWith("owners/" + ownerUUID.toString()))
+                .expectHeader().value("Location", endsWith("owners/" + owner.getId().toString()))
                 .returnResult(FluxExchangeResult.class);
 
         // then
@@ -154,22 +163,19 @@ class VisitControllerIT extends ControllerTestParent {
         assertThat(visit).isEqualToIgnoringGivenFields(capturedVisit, "id");
     }
 
+    @DisplayName("should reject invalid input for creating visit")
     @Test
     void testCreateVisitInvalid() {
         // given
-        UUID visitUUID = UUID.randomUUID();
-        UUID ownerUUID = UUID.fromString("82ee7568-c925-43ae-ae96-a6d3f96e834e");
-        Visit visit = Visit.builder()
-                .id(visitUUID)
-                .date(LocalDate.of(2015, 12, 1))
-                .build();
-        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
+        Visit visit = this.testDataFactory.getVisit();
+        visit.setDate(null);
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(this.testDataFactory.getPet()));
+        when(this.ownerService.getById(any())).thenReturn(Mono.just(this.testDataFactory.getOwner()));
 
         // when
         FluxExchangeResult result = this.webTestClient.post()
                 .uri(URL_SHOW_CREATE_VISIT_FORM_VALID)
-                .body(BodyInserters.fromFormData(this.visitToFormData(visit)))
+                .body(BodyInserters.fromFormData(FormDataMapper.visitToFormData(visit)))
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
@@ -179,21 +185,18 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_SHOW_CREATE_VISIT_FORM, result);
     }
 
+    @DisplayName("should return 404 when creating visit for non-existing owner")
     @Test
     void testCreateVisitOwnerNotExists() {
         // given
         when(this.ownerService.getById(any())).thenReturn(Mono.empty());
-        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(new Pet()));
-        Visit visit = Visit.builder()
-                .id(UUID.randomUUID())
-                .description("Description")
-                .date(LocalDate.of(2015, 12, 1))
-                .build();
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(this.testDataFactory.getPet()));
+        Visit visit = this.testDataFactory.getVisit();
 
         // when / then
         FluxExchangeResult result = this.webTestClient.post()
                 .uri(URL_SHOW_CREATE_VISIT_FORM_VALID)
-                .body(BodyInserters.fromFormData(this.visitToFormData(visit)))
+                .body(BodyInserters.fromFormData(FormDataMapper.visitToFormData(visit)))
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
@@ -201,21 +204,18 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
+    @DisplayName("should return 404 when creating visit for non-existing pet")
     @Test
     void testCreateVisitPetNotExists() {
         // given
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
+        when(this.ownerService.getById(any())).thenReturn(Mono.just(testDataFactory.getOwner()));
         when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.empty());
-        Visit visit = Visit.builder()
-                .id(UUID.randomUUID())
-                .description("Description")
-                .date(LocalDate.of(2015, 12, 1))
-                .build();
+        Visit visit = this.testDataFactory.getVisit();
 
         // when / then
         FluxExchangeResult result = this.webTestClient.post()
                 .uri(URL_SHOW_CREATE_VISIT_FORM_VALID)
-                .body(BodyInserters.fromFormData(this.visitToFormData(visit)))
+                .body(BodyInserters.fromFormData(FormDataMapper.visitToFormData(visit)))
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
@@ -223,12 +223,13 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
+    @DisplayName("should return 400 when creating visit for invalid owner uuid")
     @Test
     void testCreateVisitInvalidOwnerUUID() {
         // when / then
         FluxExchangeResult result = this.webTestClient.post()
                 .uri(URL_SHOW_CREATE_VISIT_FORM_INVALID_OWNER)
-                .body(BodyInserters.fromFormData(this.visitToFormData(Visit.builder().description("test").build())))
+                .body(BodyInserters.fromFormData(FormDataMapper.visitToFormData(Visit.builder().description("test").build())))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
@@ -236,31 +237,17 @@ class VisitControllerIT extends ControllerTestParent {
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
     }
 
+    @DisplayName("should return 400 when creating visit for invalid pet uuid")
     @Test
     void testCreateVisitInvalidPetUUID() {
         // when / then
         FluxExchangeResult result = this.webTestClient.post()
                 .uri(URL_SHOW_CREATE_VISIT_FORM_INVALID_PET)
-                .body(BodyInserters.fromFormData(this.visitToFormData(Visit.builder().description("test").build())))
+                .body(BodyInserters.fromFormData(FormDataMapper.visitToFormData(Visit.builder().description("test").build())))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectHeader().contentType(MediaType.TEXT_HTML)
                 .returnResult(FluxExchangeResult.class);
         this.verifyView(EXPECTED_VIEW_400_ERROR, result);
-    }
-
-    private MultiValueMap<String, String> visitToFormData(Visit visit) {
-        MultiValueMap<String, String> result = new LinkedMultiValueMap<>();
-        if (visit.getId() != null) {
-            result.add("id", visit.getId().toString());
-        }
-        if (visit.getDate() != null) {
-            result.add("date", visit.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE));
-        }
-        if (visit.getDescription() != null) {
-            result.add("description", visit.getDescription());
-        }
-
-        return result;
     }
 }

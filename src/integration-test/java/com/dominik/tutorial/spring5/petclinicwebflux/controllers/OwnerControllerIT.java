@@ -9,29 +9,33 @@ import com.dominik.tutorial.spring5.petclinicwebflux.repositories.VisitRepositor
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VisitService;
+import com.dominik.tutorial.spring5.petclinicwebflux.testdata.TestDataFactory;
+import com.dominik.tutorial.spring5.petclinicwebflux.testutils.FormDataMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+@DisplayName("IT: Owner Controller")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 public class OwnerControllerIT {
+
+    private static final int NUM_OWNERS = 1;
+    private static final int NUM_PETS = 1;
+    private static final int NUM_VISITS = 1;
+    private static final int NUM_VETS = 1;
 
     private final OwnerService ownerService;
     private final PetService petService;
@@ -40,6 +44,7 @@ public class OwnerControllerIT {
     private final OwnerRepository ownerRepository;
     private final PetRepository petRepository;
     private final VisitRepository visitRepository;
+    private TestDataFactory testDataFactory;
 
     @Autowired
     public OwnerControllerIT(OwnerService ownerService, PetService petService, VisitService visitService, WebTestClient webTestClient, OwnerRepository ownerRepository, PetRepository petRepository, VisitRepository visitRepository) {
@@ -57,32 +62,16 @@ public class OwnerControllerIT {
         this.ownerRepository.deleteAll().block();
         this.petRepository.deleteAll().block();
         this.visitRepository.deleteAll().block();
+        this.testDataFactory = new TestDataFactory(NUM_OWNERS, NUM_PETS, NUM_VISITS, NUM_VETS);
     }
 
+    @DisplayName("should update owner and show with pets")
     @Test
     void testEditOwnerWithPet() {
         // given
-        Pet pet = Pet.builder()
-                .id(UUID.randomUUID())
-                .name("Rufus")
-                .birthDate(LocalDate.of(2012, 8, 21))
-                .petType("Dog")
-                .build();
-        Visit visit = Visit.builder()
-                .id(UUID.randomUUID())
-                .description("Visit")
-                .date(LocalDate.of(2015, 12, 1))
-                .build();
-        List<Pet> petList = new ArrayList<>();
-        petList.add(pet);
-        Owner owner = Owner.builder()
-                .firstName("Firstname")
-                .lastName("Lastname")
-                .city("City")
-                .address("Address")
-                .telephone("Phone")
-                .pets(petList)
-                .build();
+        Pet pet = this.testDataFactory.getPet();
+        Visit visit = this.testDataFactory.getVisit();
+        Owner owner = this.testDataFactory.getOwner();
 
         // when
         this.ownerService.save(owner).block();
@@ -95,7 +84,7 @@ public class OwnerControllerIT {
         owner.setFirstName("New Firstname");
         this.webTestClient.post()
                 .uri("/owners/" + owner.getId().toString() + "/edit")
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
+                .body(BodyInserters.fromFormData(FormDataMapper.ownerToFormDataMap(owner)))
                 .exchange()
                 .expectStatus().is3xxRedirection();
         Owner savedOwner = this.ownerService.getById(owner.getId()).block();
@@ -110,23 +99,16 @@ public class OwnerControllerIT {
         assertThat(owner).isEqualToIgnoringGivenFields(savedOwner, "pets");
     }
 
+    @DisplayName("should create owner")
     @Test
     void testCreateOwner() {
         // given
-        UUID ownerId = UUID.randomUUID();
-        Owner owner = Owner.builder()
-                .lastName("Lastname")
-                .firstName("Firstname")
-                .city("City")
-                .address("Address")
-                .telephone("Phone")
-                .id(ownerId)
-                .build();
+        Owner owner = this.testDataFactory.getOwner();
 
         // when
         this.webTestClient.post()
                 .uri("/owners/new")
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
+                .body(BodyInserters.fromFormData(FormDataMapper.ownerToFormDataMap(owner)))
                 .exchange()
                 .expectStatus().is3xxRedirection();
 
@@ -136,18 +118,11 @@ public class OwnerControllerIT {
         assertThat(owner).isEqualToIgnoringGivenFields(savedOwner, "id", "pets");
     }
 
+    @DisplayName("should show owner details")
     @Test
     void testShowOwnerDetails() {
         // given
-        UUID ownerId = UUID.randomUUID();
-        Owner owner = Owner.builder()
-                .lastName("Lastname")
-                .firstName("Firstname")
-                .city("City")
-                .address("Address")
-                .telephone("Phone")
-                .id(ownerId)
-                .build();
+        Owner owner = this.testDataFactory.getOwner();
         this.ownerService.save(owner).block();
 
         // when
@@ -156,27 +131,5 @@ public class OwnerControllerIT {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.TEXT_HTML);
-    }
-
-    private MultiValueMap<String, String> ownerToFormDataMap(Owner owner) {
-        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-
-        if (owner.getFirstName() != null) {
-            formData.add("firstName", owner.getFirstName());
-        }
-        if (owner.getLastName() != null) {
-            formData.add("lastName", owner.getLastName());
-        }
-        if (owner.getAddress() != null) {
-            formData.add("address", owner.getAddress());
-        }
-        if (owner.getCity() != null) {
-            formData.add("city", owner.getCity());
-        }
-        if (owner.getTelephone() != null) {
-            formData.add("telephone", owner.getTelephone());
-        }
-
-        return formData;
     }
 }

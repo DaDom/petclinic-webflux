@@ -5,6 +5,7 @@ import com.dominik.tutorial.spring5.petclinicwebflux.repositories.VetRepository;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VetService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.mongo.VetServiceMongo;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.Import;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@DisplayName("IT: Vet Data Loader")
 @DataMongoTest
 @Import({VetServiceMongo.class, VetDataLoader.class})
 class VetDataLoaderIT {
@@ -32,6 +34,7 @@ class VetDataLoaderIT {
         this.vetRepository.deleteAll().block();
     }
 
+    @DisplayName("should create data when run on empty DB")
     @Test
     void testRunOnEmpty() throws Exception {
         // when
@@ -41,6 +44,7 @@ class VetDataLoaderIT {
        assertEquals(2, this.vetService.findAll().count().block());
     }
 
+    @DisplayName("should not create data when run on non-empty DB")
     @Test
     void testRunOnNotEmpty() throws Exception {
         // given

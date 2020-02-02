@@ -2,6 +2,7 @@ package com.dominik.tutorial.spring5.petclinicwebflux.repositories;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
@@ -13,6 +14,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+@DisplayName("IT: Owner Repository")
 @DataMongoTest
 class OwnerRepositoryIT {
 
@@ -25,6 +27,11 @@ class OwnerRepositoryIT {
 
     @BeforeEach
     void setUp() {
+        /*
+        Not using the TestDataFactory here because it's easier like this to test different search cases.
+        Maybe valuable to change at a later point in time, but should be acceptable for now.
+         */
+
         if (this.ownerRepository.findAll().count().block() <= 0) {
             Owner owner1 = Owner.builder()
                     .id(UUID.randomUUID())
@@ -55,6 +62,7 @@ class OwnerRepositoryIT {
         }
     }
 
+    @DisplayName("should show search results when there are some")
     @Test
     void testFindByLastNameWithResults() {
         // when: search with 1 match; case insensitive required
@@ -85,6 +93,7 @@ class OwnerRepositoryIT {
         assertEquals(3, result.count().block());
     }
 
+    @DisplayName("should not show search results when there are none")
     @Test
     void testFindByLastNameWithoutResults() {
         // when

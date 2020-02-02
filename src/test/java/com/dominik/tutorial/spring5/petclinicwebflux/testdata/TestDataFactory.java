@@ -143,7 +143,7 @@ public class TestDataFactory {
     private LocalDate randomDate() {
         Random r = new Random();
         return LocalDate.of(
-                r.nextInt(RANDOM_DATE_MAX_YEAR + 1) + RANDOM_DATE_MIN_YEAR,
+                r.nextInt(RANDOM_DATE_MAX_YEAR - RANDOM_DATE_MIN_YEAR + 1) + RANDOM_DATE_MIN_YEAR,
                 r.nextInt(12) + 1,
                 r.nextInt(28) + 1
         );
