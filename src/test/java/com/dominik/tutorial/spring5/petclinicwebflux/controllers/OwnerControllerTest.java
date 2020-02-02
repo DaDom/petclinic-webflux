@@ -1,439 +1,318 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.controllers;
 
+import com.dominik.tutorial.spring5.petclinicwebflux.exceptions.EntityNotFoundException;
+import com.dominik.tutorial.spring5.petclinicwebflux.exceptions.InvalidParameterException;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
-import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
-import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
+import com.dominik.tutorial.spring5.petclinicwebflux.testdata.TestDataFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.reactive.server.FluxExchangeResult;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import static org.hamcrest.Matchers.endsWith;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
+@DisplayName("Owner Controller")
 @ExtendWith(MockitoExtension.class)
-@WebFluxTest(controllers = OwnerController.class)
-class OwnerControllerTest extends ControllerTestParent {
+class OwnerControllerTest {
 
-    private static final String ENDPOINT_FIND_OWNER_FORM = "/owners/find";
-    private static final String ENDPOINT_ADD_OWNER_FORM = "/owners/new";
-    private static final String ENDPOINT_FIND_OWNERS = "/owners";
-    private static final String ENDPOINT_OWNER_DETAILS_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e";
-    private static final String ENDPOINT_OWNER_DETAILS_INVALID = "/owners/123";
-    private static final String ENDPOINT_UPDATE_OWNER_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e/edit";
-    private static final String ENDPOINT_UPDATE_OWNER_INVALID = "/owners/123/edit";
+    private static final String EXPECTED_VIEW_SEARCH_FORM_REDIRECT = "redirect:/owners/find";
+    private static final String EXPECTED_VIEW_OWNERS_LIST = "owners/ownersList";
+    private static final String EXPECTED_VIEW_FIND_OWNER_FORM = "owners/findOwners";
+    private static final String EXPECTED_VIEW_SHOW_OWNER_DETAILS = "owners/ownerDetails";
+    private static final String EXPECTED_VIEW_CREATE_OR_UPDATE_OWNER_FORM = "owners/createOrUpdateOwnerForm";
+    private static final String EXPECTED_VIEW_OWNER_CREATED = "redirect:/owners/";
+    private static final String OWNER_SEARCH_RESULT_KEY = "selections";
+    private static final String OWNER_KEY = "owner";
+    private static final String IS_NEW_KEY = "isNew";
+    private static final int NUM_OWNERS = 3;
 
-    private static final String EXPECTED_VIEW_FIND_OWNER = "owners/findOwners";
-    private static final String EXPECTED_VIEW_ADD_OWNER = "owners/createOrUpdateOwnerForm";
-    private static final String EXPECTED_VIEW_UPDATE_OWNER = "owners/createOrUpdateOwnerForm";
-    private static final String EXPECTED_VIEW_OWNER_DETAILS = "owners/ownerDetails";
-    private static final String EXPECTED_VIEW_OWNER_LIST = "owners/ownersList";
-    private static final String EXPECTED_VIEW_400_ERROR = "400error";
-
-    private static final String QUERY_PARAM_FIND_OWNERS = "lastName";
-
-    @MockBean
+    @Mock
+    private Model model;
+    @Mock
     private OwnerService ownerService;
-    @Autowired
-    private WebTestClient webTestClient;
+    @Mock
+    private WebDataBinder dataBinder;
+    @Mock
+    BindingResult bindingResult;
+    @InjectMocks
+    private OwnerController controller;
+    private TestDataFactory testDataFactory;
 
+    @BeforeEach
+    void setUp() {
+        this.testDataFactory = new TestDataFactory(NUM_OWNERS);
+    }
+
+    @DisplayName("should show form when no search")
+    @Test
+    void testFindOwnersNoSearchString() {
+        // when
+        String resultView = this.controller.findOwners(null, this.model);
+
+        // then
+        then(this.model).shouldHaveNoInteractions();
+        assertThat(EXPECTED_VIEW_SEARCH_FORM_REDIRECT).isEqualTo(resultView);
+    }
+
+    @DisplayName("should show all when empty search string")
+    @Test
+    void testFindOwnersEmptySearchString() {
+        // given
+        given(this.ownerService.findAll()).willReturn(Flux.fromIterable(this.testDataFactory.getOwners()));
+        ArgumentCaptor<Flux<Owner>> captor = ArgumentCaptor.forClass(Flux.class);
+
+        // when
+        String resultView = this.controller.findOwners("  ", this.model);
+
+        // then
+        then(this.ownerService).should(times(1)).findAll();
+        then(this.model).should(times(1)).addAttribute(eq(OWNER_SEARCH_RESULT_KEY), captor.capture());
+        List<Owner> ownerList = captor.getValue().collectList().block();
+        assertThat(ownerList).isNotNull();
+        for (int i = 0; i < NUM_OWNERS; i++) {
+            assertThat(this.testDataFactory.getOwners().get(i)).isEqualToComparingFieldByField(ownerList.get(i));
+        }
+        assertThat(EXPECTED_VIEW_OWNERS_LIST).isEqualTo(resultView);
+    }
+
+    @DisplayName("should search by name with non-empty search string")
+    @Test
+    void testFindOwnersNonEmptySearchString() {
+        // given
+        String searchString = "anything";
+        given(this.ownerService.findByLastNameFragment(searchString)).willReturn(Flux.fromIterable(this.testDataFactory.getOwners()));
+        ArgumentCaptor<Flux<Owner>> captor = ArgumentCaptor.forClass(Flux.class);
+
+        // when
+        String resultView = this.controller.findOwners(searchString, this.model);
+
+        // then
+        then(this.ownerService).should(times(1)).findByLastNameFragment(eq(searchString));
+        then(this.model).should(times(1)).addAttribute(eq(OWNER_SEARCH_RESULT_KEY), captor.capture());
+        List<Owner> ownerList = captor.getValue().collectList().block();
+        assertThat(ownerList).isNotNull();
+        for (int i = 0; i < NUM_OWNERS; i++) {
+            assertThat(this.testDataFactory.getOwners().get(i)).isEqualToComparingFieldByField(ownerList.get(i));
+        }
+        assertThat(EXPECTED_VIEW_OWNERS_LIST).isEqualTo(resultView);
+    }
+
+    @DisplayName("should show find owner form")
     @Test
     void testShowFindOwnerForm() {
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_FIND_OWNER_FORM)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-        this.verifyView(EXPECTED_VIEW_FIND_OWNER, result);
+        // when
+        String resultView = this.controller.showFindOwnerForm(this.model);
+
+        // then
+        then(this.model).should(times(1)).addAttribute(eq(OWNER_KEY), any(Mono.class));
+        assertThat(EXPECTED_VIEW_FIND_OWNER_FORM).isEqualTo(resultView);
     }
 
+    @DisplayName("should show add owner form")
     @Test
     void testShowAddOwnerForm() {
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_ADD_OWNER_FORM)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-        this.verifyView(EXPECTED_VIEW_ADD_OWNER, result);
-    }
-
-    @Test
-    void testCreateOwnerSuccess() {
-        // given
-        UUID id = UUID.randomUUID();
-        Owner owner = Owner.builder()
-                .id(id)
-                .firstName("Dominik")
-                .lastName("Picker")
-                .address("Address")
-                .city("City")
-                .telephone("Phone")
-                .build();
-        when(this.ownerService.save(any())).thenReturn(Mono.just(owner));
-
-        // when / then
-        this.webTestClient.post()
-                .uri(ENDPOINT_ADD_OWNER_FORM)
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
-                .exchange()
-                .expectStatus().is3xxRedirection()
-                .expectHeader().value("Location", endsWith("/owners/" + id.toString()));
-    }
-
-    @Test
-    void testCreateOwnerMissingField() {
-        Owner owner = Owner.builder()
-                .lastName("Picker")
-                .address("Address")
-                .city("City")
-                .telephone("Phone")
-                .build();
-
-        // when / then
-        FluxExchangeResult result = this.webTestClient.post()
-                .uri(ENDPOINT_ADD_OWNER_FORM)
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-        assertEquals(ENDPOINT_ADD_OWNER_FORM, result.getUriTemplate());
-        this.verifyView(EXPECTED_VIEW_ADD_OWNER, result);
-    }
-
-    @Test
-    void testCreateOwnerBlankField() {
-        Owner owner = Owner.builder()
-                .lastName("   ")
-                .address("Address")
-                .city("City")
-                .telephone("Phone")
-                .build();
-
-        // when / then
-        FluxExchangeResult result = this.webTestClient.post()
-                .uri(ENDPOINT_ADD_OWNER_FORM)
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-        assertEquals(ENDPOINT_ADD_OWNER_FORM, result.getUriTemplate());
-        this.verifyView(EXPECTED_VIEW_ADD_OWNER, result);
-    }
-
-    @Test
-    void testOwnerDetailsFound() {
-        // given
-        UUID id = UUID.randomUUID();
-        List<Pet> petList = List.of(
-                Pet.builder()
-                        .name("Pet 1")
-                        .petType("Cat")
-                        .birthDate(LocalDate.now())
-                        .visits(List.of(
-                                Visit.builder()
-                                        .date(LocalDate.now())
-                                        .description("Visit")
-                                        .id(UUID.randomUUID())
-                                        .build()
-                        ))
-                        .build(),
-                Pet.builder()
-                        .name("Pet 2")
-                        .petType("Dog")
-                        .birthDate(LocalDate.now())
-                        .visits(List.of(
-                                Visit.builder()
-                                        .date(LocalDate.now())
-                                        .description("Visit")
-                                        .id(UUID.randomUUID())
-                                        .build()
-                        ))
-                        .build()
-        );
-        Owner owner = Owner.builder()
-                .id(id)
-                .firstName("Dominik")
-                .lastName("Picker")
-                .city("City")
-                .address("Address")
-                .telephone("Phone")
-                .pets(petList)
-                .build();
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(owner));
-
-        // when / then
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_OWNER_DETAILS_VALID)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-        verify(this.ownerService, times(1)).getById(any());
-        this.verifyView(EXPECTED_VIEW_OWNER_DETAILS, result);
-    }
-
-    @Test
-    void testOwnerDetailsNotFound() {
-        // given
-        when(this.ownerService.getById(any())).thenReturn(Mono.empty());
-
-        // when / then
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_OWNER_DETAILS_VALID)
-                .exchange()
-                .expectStatus().isNotFound()
-                .returnResult(FluxExchangeResult.class);
-        verify(this.ownerService, times(1)).getById(any());
-        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
-    }
-
-    @Test
-    void testOwnerDetailsInvalidUUID() {
-        // when / then
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_OWNER_DETAILS_INVALID)
-                .exchange()
-                .expectStatus().isBadRequest()
-                .returnResult(FluxExchangeResult.class);
-        verifyNoInteractions(this.ownerService);
-        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
-    }
-
-    @Test
-    void testFindOwnersWithoutQuery() {
         // when
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_FIND_OWNERS)
-                .exchange()
-                .expectStatus().is3xxRedirection()
-                .expectHeader().value("Location", endsWith("/owners/find"))
-                .returnResult(FluxExchangeResult.class);
+        String resultView = this.controller.showAddOwnerForm(this.model);
 
         // then
-        verifyNoInteractions(this.ownerService);
+        then(this.model).should(times(1)).addAttribute(eq(OWNER_KEY), any(Mono.class));
+        then(this.model).should(times(1)).addAttribute(IS_NEW_KEY, true);
+        assertThat(EXPECTED_VIEW_CREATE_OR_UPDATE_OWNER_FORM).isEqualTo(resultView);
     }
 
+    @DisplayName("should create owner with valid input")
     @Test
-    void testFindOwnersWithBlankQuery() {
+    void testCreateOwnerValidInput() {
         // given
-        when(this.ownerService.findAll()).thenReturn(Flux.empty());
+        Owner owner = this.testDataFactory.getOwner();
+        given(this.ownerService.save(any(Owner.class))).willReturn(Mono.just(owner));
+        ArgumentCaptor<Owner> captor = ArgumentCaptor.forClass(Owner.class);
 
         // when
-        String url = UriComponentsBuilder.fromUriString(ENDPOINT_FIND_OWNERS)
-                .queryParam(QUERY_PARAM_FIND_OWNERS, "")
-                .toUriString();
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(url)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
+        this.controller.avoidIdFieldProcessing(new WebDataBinder(owner));
+        String resultView = this.controller.createOwner(Mono.just(owner), this.model).block();
 
         // then
-        verify(this.ownerService, times(1)).findAll();
-        this.verifyView(EXPECTED_VIEW_OWNER_LIST, result);
+        then(this.ownerService).should(times(1)).save(captor.capture());
+        assertThat(owner).isEqualToComparingFieldByField(captor.getValue());
+        assertThat(EXPECTED_VIEW_OWNER_CREATED + owner.getId().toString()).isEqualTo(resultView);
     }
 
+    @DisplayName("should create owner with valid input")
     @Test
-    void testFindOwnersWithQuery() {
+    void testCreateOwnerInvalidInput() {
         // given
-        when(this.ownerService.findByLastNameFragment(anyString())).thenReturn(Flux.empty());
+        Owner owner = this.testDataFactory.getOwner();
+        owner.setFirstName("");
+        given(dataBinder.getBindingResult()).willReturn(bindingResult);
+        given(bindingResult.hasErrors()).willReturn(true);
+        this.controller.avoidIdFieldProcessing(this.dataBinder);
 
         // when
-        String url = UriComponentsBuilder.fromUriString(ENDPOINT_FIND_OWNERS)
-                .queryParam(QUERY_PARAM_FIND_OWNERS, "anything")
-                .toUriString();
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(url)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
+        String resultView = this.controller.createOwner(Mono.just(owner), this.model).block();
 
         // then
-        verify(this.ownerService, times(1)).findByLastNameFragment(anyString());
-        this.verifyView(EXPECTED_VIEW_OWNER_LIST, result);
+        then(this.model).should(times(1)).addAttribute(IS_NEW_KEY, true);
+        assertThat(EXPECTED_VIEW_CREATE_OR_UPDATE_OWNER_FORM).isEqualTo(resultView);
     }
 
+    @DisplayName("should show details of existing owner")
     @Test
-    void testShowUpdateOwnerFormValid() {
+    void testShowExistingOwnerDetails() {
         // given
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
+        UUID uuid = UUID.randomUUID();
+        given(this.ownerService.getById(any())).willReturn(Mono.just(this.testDataFactory.getOwner()));
+        ArgumentCaptor<Mono> captor = ArgumentCaptor.forClass(Mono.class);
 
         // when
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_UPDATE_OWNER_VALID)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
+        String returnedView = this.controller.showOwnerDetails(uuid.toString(), this.model).block();
 
         // then
-        verify(this.ownerService, times(1)).getById(any());
-        this.verifyView(EXPECTED_VIEW_UPDATE_OWNER, result);
+        then(this.ownerService).should(times(1)).getById(eq(uuid));
+        then(this.model).should(times(1)).addAttribute(eq(OWNER_KEY), captor.capture());
+        assertThat(this.testDataFactory.getOwner()).isEqualToComparingFieldByField(captor.getValue().block());
+        assertThat(EXPECTED_VIEW_SHOW_OWNER_DETAILS).isEqualTo(returnedView);
     }
 
+    @DisplayName("should throw exception for invalid UUID when showing owner details")
     @Test
-    void testShowUpdateOwnerFormInvalid() {
+    void testShowOwnerDetailsInvalidUUID() {
         // given
-        when(this.ownerService.getById(any())).thenReturn(Mono.just(new Owner()));
+        String uuid = "123";
 
         // when
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_UPDATE_OWNER_INVALID)
-                .exchange()
-                .expectStatus().isBadRequest()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-
-        // then
-        verifyNoInteractions(this.ownerService);
-        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
+        assertThrows(InvalidParameterException.class, () -> {
+            this.controller.showOwnerDetails(uuid, this.model).block();
+        });
     }
 
+    @DisplayName("should throw exception when showing non-existing owner details")
     @Test
-    void testShowUpdateOwnerFormNotFound() {
+    void testShowNonExistingOwnerDetails() {
         // given
-        when(this.ownerService.getById(any())).thenReturn(Mono.empty());
+        UUID uuid = UUID.randomUUID();
+        given(this.ownerService.getById(any())).willReturn(Mono.empty());
 
         // when
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(ENDPOINT_UPDATE_OWNER_VALID)
-                .exchange()
-                .expectStatus().isNotFound()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-
-        // then
-        verify(this.ownerService, times(1)).getById(any());
-        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
+        assertThrows(EntityNotFoundException.class, () -> {
+            this.controller.showOwnerDetails(uuid.toString(), this.model).block();
+        });
+        then(this.ownerService).should(times(1)).getById(eq(uuid));
     }
 
+    @DisplayName("should show update owner form for existing owner")
+    @Test
+    void testShowUpdateExistingOwnerForm() {
+        // given
+        UUID uuid = UUID.randomUUID();
+        given(this.ownerService.getById(any())).willReturn(Mono.just(this.testDataFactory.getOwner()));
+        ArgumentCaptor<Mono> captor = ArgumentCaptor.forClass(Mono.class);
+
+        // when
+        String returnedView = this.controller.showUpdateOwnerForm(uuid.toString(), this.model).block();
+
+        //then
+        then(this.ownerService).should(times(1)).getById(eq(uuid));
+        then(this.model).should(times(1)).addAttribute(eq(OWNER_KEY), captor.capture());
+        then(this.model).should(times(1)).addAttribute(IS_NEW_KEY, false);
+        assertThat(this.testDataFactory.getOwner()).isEqualToComparingFieldByField(captor.getValue().block());
+        assertThat(EXPECTED_VIEW_CREATE_OR_UPDATE_OWNER_FORM).isEqualTo(returnedView);
+    }
+
+    @DisplayName("should throw exception when showing update owner form with invalid UUID")
+    @Test
+    void testShowUpdateOwnerFormInvalidUUID() {
+        // given
+        String uuid = "123";
+
+        // when
+        assertThrows(InvalidParameterException.class, () -> {
+            this.controller.showUpdateOwnerForm(uuid, this.model).block();
+        });
+    }
+
+    @DisplayName("should throw exception when showing update non-existing owner form")
+    @Test
+    void testShowUpdateNonExistingOwnerForm() {
+        // given
+        UUID uuid = UUID.randomUUID();
+        given(this.ownerService.getById(any())).willReturn(Mono.empty());
+
+        // when
+        assertThrows(EntityNotFoundException.class, () -> {
+            this.controller.showUpdateOwnerForm(uuid.toString(), this.model).block();
+        });
+        then(this.ownerService).should(times(1)).getById(eq(uuid));
+    }
+
+    @DisplayName("should update owner with valid input")
     @Test
     void testUpdateOwnerValid() {
         // given
-        String id = UUID.randomUUID().toString();
-        Owner owner = Owner.builder()
-                .id(UUID.fromString(id))
-                .firstName("Michael")
-                .lastName("Jackson")
-                .address("Neverland Ranch")
-                .city("Las Vegas")
-                .telephone("123123123")
-                .build();
-        when(this.ownerService.save(any())).thenReturn(Mono.just(owner));
-        ArgumentCaptor captor = ArgumentCaptor.forClass(Owner.class);
+        Owner databaseOwner = this.testDataFactory.getOwner();
+        Owner updatedOwner = this.testDataFactory.getOwners().get(1);
+        given(this.ownerService.save(any())).willReturn(Mono.just(updatedOwner));
+        ArgumentCaptor<Owner> captor = ArgumentCaptor.forClass(Owner.class);
 
         // when
-        FluxExchangeResult result = this.webTestClient.post()
-                .uri("/owners/" + id + "/edit")
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
-                .exchange()
-                .expectStatus().is3xxRedirection()
-                .expectHeader().value("Location", endsWith("/owners/" + id))
-                .returnResult(FluxExchangeResult.class);
+        this.controller.avoidIdFieldProcessing(new WebDataBinder(updatedOwner));
+        String returnedView = this.controller.updateOwner(databaseOwner.getId().toString(), Mono.just(updatedOwner),
+                this.model).block();
 
         // then
-        verify(this.ownerService, times(1)).save((Owner) captor.capture());
-        Owner capturedOwner = (Owner)captor.getValue();
-        assertEquals(id, capturedOwner.getId().toString());
+        then(this.ownerService).should(times(1)).save(captor.capture());
+        Owner capturedOwner = captor.getValue();
+        assertThat(updatedOwner).isEqualToIgnoringGivenFields(capturedOwner, "id");
+        assertThat(databaseOwner.getId()).isEqualTo(capturedOwner.getId());
+        assertThat(EXPECTED_VIEW_OWNER_CREATED + databaseOwner.getId().toString()).isEqualTo(returnedView);
     }
 
-    @Test
-    void testUpdateOwnerIncomplete() {
-        // given
-        String id = UUID.randomUUID().toString();
-        String url = "/owners/" + id + "/edit";
-        Owner owner = Owner.builder()
-                .firstName("Michael")
-                .address("Neverland Ranch")
-                .city("Las Vegas")
-                .telephone("123123123")
-                .build();
-
-        // when
-        FluxExchangeResult result = this.webTestClient.post()
-                .uri(url)
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-
-        // then
-        verifyNoInteractions(this.ownerService);
-        assertEquals(url, result.getUriTemplate());
-        this.verifyView(EXPECTED_VIEW_UPDATE_OWNER, result);
-    }
-
+    @DisplayName("should throw exception when updating owner with invalid UUID")
     @Test
     void testUpdateOwnerInvalidUUID() {
         // given
-        String id = "123";
-        Owner owner = Owner.builder()
-                .firstName("Michael")
-                .lastName("Jackson")
-                .address("Neverland Ranch")
-                .city("Las Vegas")
-                .telephone("123123123")
-                .build();
+        String uuid = "123";
 
         // when
-        FluxExchangeResult result = this.webTestClient.post()
-                .uri("/owners/" + id + "/edit")
-                .body(BodyInserters.fromFormData(this.ownerToFormDataMap(owner)))
-                .exchange()
-                .expectStatus().isBadRequest()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-
-        // then
-        verifyNoInteractions(this.ownerService);
-        this.verifyView(EXPECTED_VIEW_400_ERROR, result);
+        assertThrows(InvalidParameterException.class, () -> {
+            this.controller.updateOwner(uuid, Mono.just(this.testDataFactory.getOwner()), this.model).block();
+        });
     }
 
-    private MultiValueMap<String, String> ownerToFormDataMap(Owner owner) {
-        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    @DisplayName("should not update owner with invalid input")
+    @Test
+    void testUpdateOwnerInvalid() {
+        // given
+        Owner owner = this.testDataFactory.getOwner();
+        owner.setFirstName("");
+        given(this.dataBinder.getBindingResult()).willReturn(this.bindingResult);
+        given(this.bindingResult.hasErrors()).willReturn(true);
 
-        if (owner.getFirstName() != null) {
-            formData.add("firstName", owner.getFirstName());
-        }
-        if (owner.getLastName() != null) {
-            formData.add("lastName", owner.getLastName());
-        }
-        if (owner.getAddress() != null) {
-            formData.add("address", owner.getAddress());
-        }
-        if (owner.getCity() != null) {
-            formData.add("city", owner.getCity());
-        }
-        if (owner.getTelephone() != null) {
-            formData.add("telephone", owner.getTelephone());
-        }
+        // when
+        this.controller.avoidIdFieldProcessing(this.dataBinder);
+        String returnedView = this.controller.updateOwner(owner.getId().toString(), Mono.just(owner), this.model).block();
 
-        return formData;
+        // then
+        then(this.model).should(times(1)).addAttribute(IS_NEW_KEY, false);
+        assertThat(EXPECTED_VIEW_CREATE_OR_UPDATE_OWNER_FORM).isEqualTo(returnedView);
     }
 }

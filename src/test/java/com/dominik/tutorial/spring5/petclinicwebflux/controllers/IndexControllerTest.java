@@ -1,46 +1,44 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.controllers;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.reactive.server.FluxExchangeResult;
-import org.springframework.test.web.reactive.server.WebTestClient;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ui.Model;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
-@WebFluxTest(controllers = IndexController.class)
-class IndexControllerTest extends ControllerTestParent {
+@DisplayName("Index Controller")
+@ExtendWith(MockitoExtension.class)
+class IndexControllerTest {
 
-    private static final String EXPECTED_VIEW = "index";
+    private static final String WELCOME_MESSAGE_KEY = "welcome";
+    private static final String EXPECTED_VIEW_INDEX = "index";
 
-    @Autowired
-    private WebTestClient webTestClient;
+    @Mock
+    private Model model;
+    private IndexController controller;
 
-    @Test
-    void startPageWithoutSlash() throws Exception {
-        String endpoint = "";
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(endpoint)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-        assertEquals(endpoint, result.getUriTemplate());
-        this.verifyView(EXPECTED_VIEW, result);
+    @BeforeEach
+    void setUp() {
+        this.controller = new IndexController();
     }
 
+    @DisplayName("should show index")
     @Test
-    void startPageWitSlash() throws Exception {
-        // Testing endpoint "/"
-        String endpoint = "/";
-        FluxExchangeResult result = this.webTestClient.get()
-                .uri(endpoint)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
-                .returnResult(FluxExchangeResult.class);
-        assertEquals(endpoint, result.getUriTemplate());
-        this.verifyView(EXPECTED_VIEW, result);
+    void testStartPage() {
+        // when
+        String resultView = this.controller.startPage(this.model).block();
+
+        // then
+        then(this.model).should(times(1)).addAttribute(eq(WELCOME_MESSAGE_KEY), any());
+        assertThat(EXPECTED_VIEW_INDEX).isEqualTo(resultView);
     }
 }

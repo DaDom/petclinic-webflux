@@ -1,5 +1,6 @@
-package com.dominik.tutorial.spring5.petclinicwebflux.controllers;
+package com.dominik.tutorial.spring5.petclinicwebflux.controllers.webfluxtests;
 
+import com.dominik.tutorial.spring5.petclinicwebflux.controllers.VisitController;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.*;
 
 @WebFluxTest(controllers = VisitController.class)
 @ExtendWith(MockitoExtension.class)
-class VisitControllerTest extends ControllerTestParent {
+class VisitControllerIT extends ControllerTestParent {
 
     private static final String URL_SHOW_CREATE_VISIT_FORM_VALID = "/owners/82ee7568-c925-43ae-ae96-a6d3f96e834e/pets/82ee7568-c925-43ae-ae96-a6d3f96e834e/visits/new";
     private static final String URL_SHOW_CREATE_VISIT_FORM_INVALID_OWNER = "/owners/123/pets/82ee7568-c925-43ae-ae96-a6d3f96e834e/visits/new";

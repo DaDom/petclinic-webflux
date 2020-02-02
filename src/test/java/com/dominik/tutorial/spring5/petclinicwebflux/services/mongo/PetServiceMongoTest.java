@@ -1,12 +1,14 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.services.mongo;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
-import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.repositories.PetRepository;
-import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VisitService;
+import com.dominik.tutorial.spring5.petclinicwebflux.testdata.TestDataFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -15,123 +17,133 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
+@DisplayName("Pet Service Mongo")
 @ExtendWith(MockitoExtension.class)
 class PetServiceMongoTest {
 
-    @Mock
-    private OwnerService ownerService;
+    private static final int NUM_OWNERS = 0;
+    private static final int NUM_PETS = 1;
+    private static final int NUM_VISITS = 5;
+
     @Mock
     private VisitService visitService;
     @Mock
     private PetRepository petRepository;
     @InjectMocks
     private PetServiceMongo petService;
+    private TestDataFactory testDataFactory;
 
+    @BeforeEach
+    void setUp() {
+        this.testDataFactory = new TestDataFactory(NUM_OWNERS, NUM_PETS, NUM_VISITS);
+    }
+
+    @DisplayName("should find existing pet by pet ID")
     @Test
     void testFindByIdExistingPet() {
         // given
-        UUID petId = UUID.randomUUID();
-        String petName = "PET";
-        Pet targetPet = Pet.builder()
-                .id(petId)
-                .name(petName)
-                .build();
-        when(this.petRepository.findById(eq(petId))).thenReturn(Mono.just(targetPet));
-        when(this.visitService.findByPet(eq(petId))).thenReturn(Flux.just(new Visit()));
+        Pet targetPet = this.testDataFactory.getPet();
+        UUID petId = targetPet.getId();
+        given(this.petRepository.findById(petId)).willReturn(Mono.just(targetPet));
+        given(this.visitService.findByPet(petId)).willReturn(Flux.fromIterable(this.testDataFactory.getVisits()));
 
         // when
         Mono<Pet> result = this.petService.findById(petId);
 
         // then
         Pet resultPet = result.block();
-        assertNotNull(resultPet);
-        assertEquals(petName, resultPet.getName());
-        assertEquals(1, resultPet.getVisits().size());
+        assertThat(resultPet).isNotNull();
+        assertThat(targetPet).isEqualToIgnoringGivenFields(resultPet, "visits");
+        assertThat(resultPet.getVisits()).hasSize(NUM_VISITS);
     }
 
+    @DisplayName("should find existing pet by owner ID")
     @Test
     void testFindByOwnerIdExistingPet() {
         // given
-        UUID petId = UUID.randomUUID();
+        Pet targetPet = this.testDataFactory.getPet();
+        UUID petId = targetPet.getId();
         UUID ownerId = UUID.randomUUID();
-        String petName = "PET";
-        Pet targetPet = Pet.builder()
-                .id(petId)
-                .name(petName)
-                .build();
-        when(this.petRepository.findByIdAndOwnerId(eq(petId), eq(ownerId))).thenReturn(Mono.just(targetPet));
-        when(this.visitService.findByPet(eq(petId))).thenReturn(Flux.just(new Visit()));
+        given(this.petRepository.findByIdAndOwnerId(petId, ownerId)).willReturn(Mono.just(targetPet));
+        given(this.visitService.findByPet(petId)).willReturn(Flux.fromIterable(this.testDataFactory.getVisits()));
 
         // when
         Mono<Pet> result = this.petService.findByIdAndOwner(petId, ownerId);
 
         // then
         Pet resultPet = result.block();
-        assertNotNull(resultPet);
-        assertEquals(petName, resultPet.getName());
-        assertEquals(1, resultPet.getVisits().size());
+        assertThat(resultPet).isNotNull();
+        assertThat(targetPet).isEqualToIgnoringGivenFields(resultPet, "visits");
+        assertThat(resultPet.getVisits()).hasSize(NUM_VISITS);
     }
 
+    @DisplayName("should not find any non-existing pet by owner ID")
     @Test
     void testFindByOwnerIdNotExistingPet() {
         // given
         UUID petId = UUID.randomUUID();
         UUID ownerId = UUID.randomUUID();
-        when(this.petRepository.findByIdAndOwnerId(eq(petId), eq(ownerId))).thenReturn(Mono.empty());
+        given(this.petRepository.findByIdAndOwnerId(petId, ownerId)).willReturn(Mono.empty());
 
         // when
         Mono<Pet> result = this.petService.findByIdAndOwner(petId, ownerId);
 
         // then
-        assertFalse(result.hasElement().block());
+        assertThat(result.hasElement().block()).isFalse();
+        then(this.petRepository).should(times(1)).findByIdAndOwnerId(petId, ownerId);
     }
 
+    @DisplayName("should not find any non-existing pet by pet ID")
     @Test
     void testFindByIdNotExistingPet() {
         // given
-        UUID ownerId = UUID.randomUUID();
         UUID petId = UUID.randomUUID();
-        when(this.petRepository.findById(eq(petId))).thenReturn(Mono.empty());
+        given(this.petRepository.findById(petId)).willReturn(Mono.empty());
 
         // when
         Mono<Pet> result = this.petService.findById(petId);
 
         // then
-        assertFalse(result.hasElement().block());
-        verify(this.petRepository, times(1)).findById(eq(petId));
+        assertThat(result.hasElement().block()).isFalse();
+        then(this.petRepository).should(times(1)).findById(petId);
     }
 
+    @DisplayName("should save new pet in repository")
     @Test
     void testSaveNewPet() {
         // given
         UUID ownerId = UUID.randomUUID();
-        UUID petId = UUID.randomUUID();
-        Pet pet = Pet.builder()
-                .id(petId)
-                .build();
-        when(this.petRepository.save(eq(pet))).thenReturn(Mono.just(pet));
+        Pet pet = this.testDataFactory.getPet();
+        given(this.petRepository.save(eq(pet))).willReturn(Mono.just(pet));
+        ArgumentCaptor<Pet> captor = ArgumentCaptor.forClass(Pet.class);
 
         // when
         this.petService.save(ownerId, pet).block();
 
         // then
-        verify(this.petRepository, times(1)).save(eq(pet));
+        then(this.petRepository).should(times(1)).save(captor.capture());
+        Pet capturedPet = captor.getValue();
+        assertThat(pet).isEqualToIgnoringGivenFields(capturedPet, "ownerId");
+        assertThat(ownerId.toString()).isEqualTo(capturedPet.getOwnerId().toString());
     }
 
+    @DisplayName("should delete a pet from repository")
     @Test
     void testDelete() {
         // given
-        UUID petId = UUID.randomUUID();
-        when(this.petRepository.deleteById(eq(petId))).thenReturn(Mono.empty());
+        Pet pet = this.testDataFactory.getPet();
+        given(this.petRepository.deleteById(pet.getId())).willReturn(Mono.empty());
 
         // when
-        this.petService.delete(petId).block();
+        this.petService.delete(pet.getId()).block();
 
         // then
-        verify(this.petRepository, times(1)).deleteById(eq(petId));
+        then(this.petRepository).should(times(1)).deleteById(pet.getId());
     }
 }

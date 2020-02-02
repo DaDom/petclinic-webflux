@@ -1,5 +1,6 @@
-package com.dominik.tutorial.spring5.petclinicwebflux.controllers;
+package com.dominik.tutorial.spring5.petclinicwebflux.controllers.webfluxtests;
 
+import com.dominik.tutorial.spring5.petclinicwebflux.controllers.VetController;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Vet;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VetService;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @WebFluxTest(controllers = VetController.class)
-class VetControllerTest extends ControllerTestParent {
+class VetControllerIT extends ControllerTestParent {
 
     @MockBean
     private VetService vetService;

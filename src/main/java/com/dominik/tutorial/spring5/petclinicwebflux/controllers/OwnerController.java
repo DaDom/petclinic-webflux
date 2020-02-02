@@ -85,7 +85,6 @@ public class OwnerController extends BaseController {
         Mono<Owner> owner = this.ownerService.getById(ownerUUID);
 
         model.addAttribute(MODEL_ATTRIBUTE_OWNER, owner);
-        model.addAttribute(MODEL_ATTRIBUTE_IS_NEW, false);
         return owner
                 .flatMap(o -> Mono.just(VIEW_OWNER_DETAILS))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)));
@@ -96,6 +95,7 @@ public class OwnerController extends BaseController {
         UUID ownerUUID = this.fromStringOrThrow(ownerId, Owner.class);
         Mono<Owner> owner = this.ownerService.getById(ownerUUID);
         model.addAttribute(MODEL_ATTRIBUTE_OWNER, owner);
+        model.addAttribute(MODEL_ATTRIBUTE_IS_NEW, false);
         return owner
                 .flatMap(o -> Mono.just(VIEW_CREATE_OR_UPDATE_OWNER_FORM))
                 .switchIfEmpty(Mono.error(EntityNotFoundException.failedIdLookup(Owner.class, ownerId)));

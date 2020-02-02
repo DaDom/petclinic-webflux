@@ -1,4 +1,4 @@
-package com.dominik.tutorial.spring5.petclinicwebflux.controllers;
+package com.dominik.tutorial.spring5.petclinicwebflux.controllers.webfluxtests;
 
 import org.springframework.test.web.reactive.server.FluxExchangeResult;
 
