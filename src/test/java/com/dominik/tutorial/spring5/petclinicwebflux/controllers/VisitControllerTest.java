@@ -20,8 +20,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -251,6 +253,54 @@ class VisitControllerTest {
         then(this.visitService).should(times(1)).createVisit(eq(pet.getId()), captor.capture());
         assertThat(visit).isEqualToComparingFieldByField(captor.getValue());
         assertThat(EXPECTED_REDIRECT_OWNER_DETAILS + owner.getId().toString()).isEqualTo(returnedView);
+    }
+
+    @DisplayName("should get owner for model")
+    @Test
+    void testOwnerToModel() {
+        // given
+        Owner owner = this.testDataFactory.getOwner();
+        given(this.ownerService.getById(owner.getId())).willReturn(Mono.just(owner));
+
+        // when
+        Owner resultOwner = this.controller.addOwnerToModel(owner.getId().toString()).block();
+
+        // then
+        assertThat(owner).isEqualToComparingFieldByField(resultOwner);
+    }
+
+    @DisplayName("should get pet for model")
+    @Test
+    void testPetToModel() {
+        // given
+        Owner owner = this.testDataFactory.getOwner();
+        Pet pet = this.testDataFactory.getPet();
+        given(this.petService.findByIdAndOwner(pet.getId(), owner.getId())).willReturn(Mono.just(pet));
+
+        // when
+        Pet resultPet = this.controller.addPetToModel(owner.getId().toString(), pet.getId().toString()).block();
+
+        // then
+        assertThat(pet).isEqualToComparingFieldByField(resultPet);
+    }
+
+    @DisplayName("should get visits for model")
+    @Test
+    void testVisitsToModel() {
+        // given
+        Owner owner = this.testDataFactory.getOwner();
+        Pet pet = this.testDataFactory.getPet();
+        List<Visit> visits = this.testDataFactory.getVisits();
+        given(this.visitService.findByPet(pet.getId())).willReturn(Flux.fromIterable(visits));
+
+        // when
+        List<Visit> resultVisits = this.controller.addPetVisitsToModel(pet.getId().toString()).collectList().block();
+
+        // then
+        assertThat(resultVisits).hasSize(visits.size());
+        for (int i = 0; i < visits.size(); i++) {
+            assertThat(visits.get(i)).isEqualToComparingFieldByField(resultVisits.get(i));
+        }
     }
 
     private void addDataBinderMock() {
