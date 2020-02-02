@@ -1,6 +1,7 @@
 package com.dominik.tutorial.spring5.petclinicwebflux.repositories;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,11 @@ class OwnerRepositoryIT {
 
             this.ownerRepository.saveAll(List.of(owner1, owner2, owner3)).count().block();
         }
+    }
+
+    @AfterEach
+    void tearDown() {
+        this.ownerRepository.deleteAll().block();
     }
 
     @DisplayName("should show search results when there are some")

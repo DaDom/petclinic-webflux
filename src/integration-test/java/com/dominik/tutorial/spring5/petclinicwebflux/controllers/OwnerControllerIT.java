@@ -11,6 +11,7 @@ import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VisitService;
 import com.dominik.tutorial.spring5.petclinicwebflux.testdata.TestDataFactory;
 import com.dominik.tutorial.spring5.petclinicwebflux.testutils.FormDataMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,13 @@ public class OwnerControllerIT {
         this.petRepository.deleteAll().block();
         this.visitRepository.deleteAll().block();
         this.testDataFactory = new TestDataFactory(NUM_OWNERS, NUM_PETS, NUM_VISITS, NUM_VETS);
+    }
+
+    @AfterEach
+    void tearDown() {
+        this.ownerRepository.deleteAll().block();
+        this.petRepository.deleteAll().block();
+        this.visitRepository.deleteAll().block();
     }
 
     @DisplayName("should update owner and show with pets")

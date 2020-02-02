@@ -8,7 +8,10 @@ import com.dominik.tutorial.spring5.petclinicwebflux.repositories.VisitRepositor
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.VisitService;
+import com.dominik.tutorial.spring5.petclinicwebflux.testdata.TestDataFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
@@ -20,8 +23,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@DisplayName("IT: Owner Service Mongo")
 @DataMongoTest
 public class OwnerServiceMongoIT {
+
+    private static final int NUM_OWNERS = 1;
+    private static final int NUM_PETS = 1;
+    private static final int NUM_VISITS = 1;
+    private static final int NUM_VETS = 1;
 
     private final OwnerRepository ownerRepository;
     private final PetRepository petRepository;
@@ -29,6 +38,7 @@ public class OwnerServiceMongoIT {
     private OwnerService ownerService;
     private PetService petService;
     private VisitService visitService;
+    private TestDataFactory testDataFactory;
 
     @Autowired
     public OwnerServiceMongoIT(OwnerRepository ownerRepository, PetRepository petRepository, VisitRepository visitRepository) {
@@ -46,13 +56,23 @@ public class OwnerServiceMongoIT {
         this.visitRepository.deleteAll().block();
         this.petRepository.deleteAll().block();
         this.ownerRepository.deleteAll().block();
+
+        this.testDataFactory = new TestDataFactory(NUM_OWNERS, NUM_PETS, NUM_VISITS, NUM_VETS);
     }
 
+    @AfterEach
+    void tearDown() {
+        this.visitRepository.deleteAll().block();
+        this.petRepository.deleteAll().block();
+        this.ownerRepository.deleteAll().block();this.ownerRepository.deleteAll().block();
+    }
+
+    @DisplayName("should save a new owner")
     @Test
     void testSave() {
         // given
-        Owner owner = this.buildBasicOwner();
-        Pet pet = this.buildBasicPet();
+        Owner owner = this.testDataFactory.getOwner();
+        Pet pet = this.testDataFactory.getPet();
 
         // when
         this.ownerService.save(owner).block();
@@ -67,11 +87,12 @@ public class OwnerServiceMongoIT {
         assertThat(pet).isEqualToIgnoringGivenFields(savedOwnerPets.get(0), "visits");
     }
 
+    @DisplayName("should save an owner and then update with pet")
     @Test
     void testSaveAndUpdate() {
         // given
-        Owner owner = this.buildBasicOwner();
-        Pet pet = this.buildBasicPet();
+        Owner owner = this.testDataFactory.getOwner();
+        Pet pet = this.testDataFactory.getPet();
 
         // when
         this.ownerService.save(owner).block();
@@ -101,25 +122,5 @@ public class OwnerServiceMongoIT {
         assertEquals(2, savedOwnerPets.size());
         assertThat(pet).isEqualToIgnoringGivenFields(savedOwnerPets.get(0), "visits");
         assertThat(newPet).isEqualToIgnoringGivenFields(savedOwnerPets.get(1), "visits");
-    }
-
-    private Owner buildBasicOwner() {
-        return Owner.builder()
-                .id(UUID.randomUUID())
-                .telephone("Phone")
-                .address("Address")
-                .city("City")
-                .lastName("Lastname")
-                .firstName("Firstname")
-                .build();
-    }
-
-    private Pet buildBasicPet() {
-        return Pet.builder()
-                .id(UUID.randomUUID())
-                .name("Rufus")
-                .petType("Dog")
-                .birthDate(LocalDate.of(2015, 12, 1))
-                .build();
     }
 }

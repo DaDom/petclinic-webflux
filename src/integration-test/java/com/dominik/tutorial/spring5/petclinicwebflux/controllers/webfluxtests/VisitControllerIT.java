@@ -2,6 +2,7 @@ package com.dominik.tutorial.spring5.petclinicwebflux.controllers.webfluxtests;
 
 import com.dominik.tutorial.spring5.petclinicwebflux.controllers.VisitController;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Owner;
+import com.dominik.tutorial.spring5.petclinicwebflux.model.Pet;
 import com.dominik.tutorial.spring5.petclinicwebflux.model.Visit;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.OwnerService;
 import com.dominik.tutorial.spring5.petclinicwebflux.services.PetService;
@@ -143,14 +144,16 @@ class VisitControllerIT extends ControllerTestParent {
         // given
         Owner owner = this.testDataFactory.getOwner();
         Visit visit = this.testDataFactory.getVisit();
+        Pet pet = this.testDataFactory.getPet();
         when(this.ownerService.getById(any())).thenReturn(Mono.just(owner));
-        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(this.testDataFactory.getPet()));
+        when(this.petService.findByIdAndOwner(any(), any())).thenReturn(Mono.just(pet));
         when(this.visitService.createVisit(any(), any())).thenReturn(Mono.just(visit));
         ArgumentCaptor captor = ArgumentCaptor.forClass(Visit.class);
+        String url = "/owners/" + owner.getId().toString() + "/pets/" + pet.getId().toString() + "/visits/new";
 
         // when
         FluxExchangeResult result = this.webTestClient.post()
-                .uri(URL_SHOW_CREATE_VISIT_FORM_VALID)
+                .uri(url)
                 .body(BodyInserters.fromFormData(FormDataMapper.visitToFormData(visit)))
                 .exchange()
                 .expectStatus().is3xxRedirection()
